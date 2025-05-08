@@ -6,11 +6,9 @@ import './slide_page_route.dart';
 import 'package:flutter/material.dart';
 import 'database_helper.dart';
 import 'package:intl/intl.dart';
-
 void main() {
   runApp(ChatbotApp());
 }
-
 class ChatbotApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
@@ -25,12 +23,10 @@ class ChatbotApp extends StatelessWidget {
     );
   }
 }
-
 class ChatBotScreen extends StatefulWidget {
   @override
   _ChatBotScreenState createState() => _ChatBotScreenState();
 }
-
 class _ChatBotScreenState extends State<ChatBotScreen>
     with TickerProviderStateMixin {
   final TextEditingController _controller = TextEditingController();
@@ -40,7 +36,6 @@ class _ChatBotScreenState extends State<ChatBotScreen>
   bool? hasIrepsAccount;
   bool isWaitingForSubmission = false;
   bool isTyping = false;
-
   String? firmName,
       unit,
       UserName,
@@ -56,10 +51,7 @@ class _ChatBotScreenState extends State<ChatBotScreen>
   String userEmail = "";
   String mobileNo = "";
   String userDepartment = "";
-
-  // Animation controllers for typing indicator
   late AnimationController _typingDotsController;
-
   final Map<String, List<String>> zoneOptions = {
     "Indian Railway": [
       "Banaras Locomotive Works",
@@ -153,7 +145,6 @@ class _ChatBotScreenState extends State<ChatBotScreen>
       " After Login Issue"
     ]
   };
-
   @override
   void initState() {
     super.initState();
@@ -161,21 +152,18 @@ class _ChatBotScreenState extends State<ChatBotScreen>
       duration: Duration(milliseconds: 700),
       vsync: this,
     )..repeat();
-
     resetChat();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       // This ensures scroll to bottom when the view is first built
       _scrollToBottom();
     });
   }
-
   void dispose() {
     _scrollController.dispose();
     userInputController.dispose();
     _typingDotsController.dispose();
     super.dispose();
   }
-
   void goToPreviousMessage() {
     setState(() {
       if (messages.length >= 2) {
@@ -186,7 +174,6 @@ class _ChatBotScreenState extends State<ChatBotScreen>
       }
     });
   }
-
   String getPreviousQuestion() {
     if (messages.isNotEmpty) {
       var lastBotMessage = messages.last['bot'];
@@ -220,7 +207,6 @@ class _ChatBotScreenState extends State<ChatBotScreen>
     }
     return "initial";
   }
-
   String getQuestionText(String questionKey) {
     switch (questionKey) {
       case "hasAccount":
@@ -253,7 +239,6 @@ class _ChatBotScreenState extends State<ChatBotScreen>
         return "Hey! I'm your IREPS Assistant. How can I help you today?";
     }
   }
-
   List<String> getOptions() {
     if (currentQuestion == "subject" && queryType != null) {
       return subjectOptions[queryType!] ?? [];
@@ -312,7 +297,6 @@ class _ChatBotScreenState extends State<ChatBotScreen>
         return [];
     }
   }
-
   void resetChat() {
     setState(() {
       messages.clear();
@@ -326,11 +310,11 @@ class _ChatBotScreenState extends State<ChatBotScreen>
             'timestamp': DateTime.now().toString(),
           });
           _showTypingIndicator();
-
           Future.delayed(Duration(seconds: 1), () {
             setState(() {
               isTyping = false;
-              messages.add({'bot': "Do you have a user account on IREPS?",
+              messages.add({
+                'bot': "Do you have a user account on IREPS?",
                 'timestamp': DateTime.now().toString(),
               });
               currentQuestion = "hasAccount";
@@ -341,40 +325,63 @@ class _ChatBotScreenState extends State<ChatBotScreen>
       });
     });
   }
-
   void _showTypingIndicator() {
     setState(() {
       isTyping = true;
       _scrollToBottom();
     });
   }
-
+  // void _generateQueryId() async {
+  //   setState(() {
+  //     _queryId = "QID${Random().nextInt(100000)}";
+  //   });
+  //   messages.add({
+  //     'bot': "Query Submitted Successfully.\n\n"
+  //         "Query ID: $_queryId\n"
+  //         "Email: $userEmail\n"
+  //         "Mobile No: $mobileNo\n"
+  //         "${designation != null && designation!.isNotEmpty ? 'Designation: $designation\n' : ''}"
+  //         "Date: $currentDate\n"
+  //         "Query Description: $queryDescription",
+  //     'timestamp': DateTime.now().toString(),
+  //   });
+  //   messages.add({
+  //     'bot': "Would you like to attach documents to this query?",
+  //     'timestamp': DateTime.now().toString(),
+  //   });
+  //   Map<String, dynamic> userData = {
+  //     'has_ireps_account': hasIrepsAccount.toString(),
+  //     'email': userEmail,
+  //     'mobile': mobileNo,
+  //     'department': userDepartment,
+  //     'firm_name': firmName,
+  //     'user_name': UserName,
+  //     'organization': organizationType,
+  //     'zone': zone,
+  //     'unit': unit,
+  //     'designation': designation,
+  //     'query_id': _queryId,
+  //     'query_type': queryType,
+  //     'subject': subject,
+  //     'query_description': queryDescription
+  //   };
+  //   try {
+  //     await DatabaseHelper.instance.insertResponse(userData);
+  //   }
+  //   catch (e, stacktrace) {
+  //     print("Error saving query: $e");
+  //     print("Stacktrace: $stacktrace");
+  //     ScaffoldMessenger.of(context).showSnackBar(
+  //       SnackBar(content: Text("Failed to save query. Please try again.")),
+  //     );
+  //   }
+  // }
   void _generateQueryId() async {
     setState(() {
       _queryId = "QID${Random().nextInt(100000)}";
     });
 
-    // First message: Query details
-    // _delayedBotResponse(
-    //   "Query Submitted Successfully.\n\n"
-    //   "Query ID: $_queryId\n"
-    //   "Email: $userEmail\n"
-    //   "Mobile No: $mobileNo\n"
-    //   "${designation != null && designation!.isNotEmpty ? 'Designation: $designation\n' : ''}"
-    //   "Date: $currentDate\n"
-    //   "Query Description: $queryDescription\n\n",
-    //   700,
-    // );
-
-    // Second message (with options): Ask about document attachment
-    // _delayedBotResponse(
-    //   "Would you like to attach documents to this query?",
-    //   1000, // Slight delay after the first message
-    //   nextQuestion:
-    //       "attachDocuments", // Options will be shown with this message
-    // );
-
-    messages.add({
+    final messageContent = {
       'bot': "Query Submitted Successfully.\n\n"
           "Query ID: $_queryId\n"
           "Email: $userEmail\n"
@@ -383,13 +390,18 @@ class _ChatBotScreenState extends State<ChatBotScreen>
           "Date: $currentDate\n"
           "Query Description: $queryDescription",
       'timestamp': DateTime.now().toString(),
+    };
+
+    setState(() {
+      messages.add(messageContent);
+      messages.add({
+        'bot': "Would you like to attach documents to this query?",
+        'timestamp': DateTime.now().toString(),
+      });
+      currentQuestion = "attachDocuments";
     });
 
-    messages.add({
-      'bot': "Would you like to attach documents to this query?",
-      'timestamp': DateTime.now().toString(),
-    });
-    // Save to database
+    // Attempt to save query to database
     Map<String, dynamic> userData = {
       'has_ireps_account': hasIrepsAccount.toString(),
       'email': userEmail,
@@ -411,9 +423,6 @@ class _ChatBotScreenState extends State<ChatBotScreen>
       await DatabaseHelper.instance.insertResponse(userData);
     } catch (e) {
       print("Error saving query: $e");
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Failed to save query. Please try again.")),
-      );
     }
   }
 
@@ -429,21 +438,18 @@ class _ChatBotScreenState extends State<ChatBotScreen>
       Future.delayed(Duration(milliseconds: 100), _scrollToBottom);
     }
   }
-
   void handleUserResponse(String response) {
     setState(() {
-      messages.add({'user': response,
+      messages.add({
+        'user': response,
         'timestamp': DateTime.now().toString(),
       });
       userInputController.clear();
       _showTypingIndicator();
     });
-
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _scrollToBottom();
     });
-
-    // Simulate typing delay for bot responses
     Future.delayed(Duration(milliseconds: 800), () async {
       setState(() {
         isTyping = false;
@@ -460,33 +466,28 @@ class _ChatBotScreenState extends State<ChatBotScreen>
         zone = response;
       }
     });
-
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _scrollToBottom();
     });
   }
-
   void _delayedBotResponse(String message, int delay, {String? nextQuestion}) {
     _showTypingIndicator();
-
     Future.delayed(Duration(milliseconds: delay), () {
       setState(() {
         isTyping = false;
-        messages.add({'bot': message,
+        messages.add({
+          'bot': message,
           'timestamp': DateTime.now().toString(),
         });
         if (nextQuestion != null) {
           currentQuestion = nextQuestion;
         }
       });
-
-      // Ensure the UI scrolls to the latest message
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _scrollToBottom();
       });
     });
   }
-
   Future<void> processNextStep(String response) async {
     switch (currentQuestion) {
       case "hasAccount":
@@ -494,7 +495,6 @@ class _ChatBotScreenState extends State<ChatBotScreen>
         _delayedBotResponse("Your email?", 700);
         currentQuestion = "email";
         break;
-
       case "email":
         if (_isValidEmail(response)) {
           userEmail = response; // Store user input email
@@ -528,9 +528,7 @@ class _ChatBotScreenState extends State<ChatBotScreen>
                       " Department: $userDepartment",
                       700);
                 }
-                // In processNextStep method - email case:
                 else if (userDepartment == "Railway/Departmental User") {
-                  // Get railway user details
                   List<Map<String, dynamic>> railwayData = await DatabaseHelper
                       .instance
                       .query('railway_user_details',
@@ -542,7 +540,6 @@ class _ChatBotScreenState extends State<ChatBotScreen>
                     designation = railwayData.first['designation'] ??
                         ""; // Ensure we get designation
                   }
-                  // Show pre-registered details
                   _delayedBotResponse(
                       "Your Registered Details are:\n"
                       " Email: $userEmail\n"
@@ -557,7 +554,6 @@ class _ChatBotScreenState extends State<ChatBotScreen>
                 _delayedBotResponse("Query related to?", 2000,
                     nextQuestion: "query");
               } else {
-                // User not found in database
                 _delayedBotResponse(
                     "No registered account found with this email. Please provide your details.",
                     700);
@@ -566,7 +562,7 @@ class _ChatBotScreenState extends State<ChatBotScreen>
               }
             } catch (e) {
               print("Error fetching user data: $e");
-              _delayedBotResponse("An error occurred. Please try again.", 700);
+              _delayedBotResponse("You don't have an IREPS account.", 700);
               _delayedBotResponse("User Type(Your Department)?", 1500);
               currentQuestion = "department";
             }
@@ -579,7 +575,6 @@ class _ChatBotScreenState extends State<ChatBotScreen>
               "Invalid email format. Please enter a valid email.", 700);
         }
         break;
-
       case "department":
         userDepartment = response;
         _delayedBotResponse(
@@ -591,13 +586,11 @@ class _ChatBotScreenState extends State<ChatBotScreen>
             ? "firmName"
             : "organization";
         break;
-
       case "firmName":
         firmName = response;
         _delayedBotResponse("UserName?", 700);
         currentQuestion = "UserName";
         break;
-
       case "UserName":
         if (response.trim().isEmpty) {
           _delayedBotResponse(
@@ -612,7 +605,6 @@ class _ChatBotScreenState extends State<ChatBotScreen>
               700);
         }
         break;
-
       case "mobileNo":
         if (_isValidMobile(response)) {
           mobileNo = response;
@@ -624,7 +616,6 @@ class _ChatBotScreenState extends State<ChatBotScreen>
               700);
         }
         break;
-
       case "organization":
         organizationType = response;
         if (response == "Other") {
@@ -635,13 +626,11 @@ class _ChatBotScreenState extends State<ChatBotScreen>
               nextQuestion: "zone");
         }
         break;
-
       case "customOrganization":
         organizationType = response;
         _delayedBotResponse("In which Zone you are?", 700,
             nextQuestion: "zone");
         break;
-
       case "zone":
         zone = response;
         if (response == "Other") {
@@ -652,18 +641,15 @@ class _ChatBotScreenState extends State<ChatBotScreen>
               nextQuestion: "unit");
         }
         break;
-
       case "customZone":
         zone = response;
         _delayedBotResponse("In which unit you are?", 700,
             nextQuestion: "unit");
         break;
-
       case "unit":
         unit = response;
         if (response == "Other") {
           if (hasIrepsAccount == false) {
-            // If user doesn't have an account
             _delayedBotResponse("Designation/Post?", 700);
             currentQuestion = "designation";
           } else {
@@ -672,7 +658,6 @@ class _ChatBotScreenState extends State<ChatBotScreen>
           }
         } else {
           if (hasIrepsAccount == false) {
-            // If user doesn't have an account
             _delayedBotResponse("Designation/Post?", 700);
             currentQuestion = "designation";
           } else {
@@ -681,11 +666,9 @@ class _ChatBotScreenState extends State<ChatBotScreen>
           }
         }
         break;
-
       case "customUnit":
         unit = response;
         if (hasIrepsAccount == false) {
-          // If user doesn't have an account
           _delayedBotResponse("Designation/Post?", 700);
           currentQuestion = "designation";
         } else {
@@ -693,19 +676,15 @@ class _ChatBotScreenState extends State<ChatBotScreen>
           currentQuestion = "mobileNo";
         }
         break;
-
-      // Add the new case for designation
       case "designation":
         designation = response;
         _delayedBotResponse("Your Mobile No.?", 700);
         currentQuestion = "mobileNo";
         break;
-
       case "query":
         queryType = response;
         _delayedBotResponse("Your subject?", 700, nextQuestion: "subject");
         break;
-
       case "subject":
         subject = response;
         _delayedBotResponse("Give query description", 700,
@@ -745,7 +724,6 @@ class _ChatBotScreenState extends State<ChatBotScreen>
               direction: AxisDirection.up, // <-- slide from bottom
             ),
           ).then((_) {
-            // After returning from the AttachDocumentsPage
             _delayedBotResponse(
               "Thank you! Your query has been recorded.",
               700,
@@ -753,7 +731,6 @@ class _ChatBotScreenState extends State<ChatBotScreen>
             currentQuestion = "initial"; // Reset to initial state
           });
         } else {
-          // If user says no to attaching documents
           _delayedBotResponse(
             "Thank you! Your query has been recorded.",
             700,
@@ -761,7 +738,6 @@ class _ChatBotScreenState extends State<ChatBotScreen>
           currentQuestion = "initial"; // Reset here as no next question needed
         }
         break;
-
       case "viewHistory":
         if (response.toLowerCase() == "yes") {
           Navigator.push(
@@ -776,33 +752,28 @@ class _ChatBotScreenState extends State<ChatBotScreen>
         break;
     }
   }
-
   bool _isValidEmail(String? email) {
     if (email == null) return false;
     final emailRegex =
         RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
     return emailRegex.hasMatch(email);
   }
-
   bool _isValidMobile(String mobile) {
     RegExp regex = RegExp(
         r'^[6-9]\d{9}$'); // Matches exactly 10-digit numbers starting with 6-9
     return regex.hasMatch(mobile) && mobile.length == 10;
   }
-
   bool _isValidUserName(String UserName) {
     final RegExp regex =
         RegExp(r'^[a-zA-Z][a-zA-Z0-9 _@#\$%\^\&\*\(\)\-]{2,19}$');
     return regex.hasMatch(UserName);
   }
-
   Widget build(BuildContext context) {
     void clearCurrentAnswer() {
       setState(() {
         userInputController.clear();
       });
     }
-
     userInputController.clear();
     return Scaffold(
       appBar: AppBar(
@@ -833,8 +804,12 @@ class _ChatBotScreenState extends State<ChatBotScreen>
               onPressed: () {
                 Navigator.push(
                   context,
-                  SlidePageRoute(page: HistoryPage()),
+                  SlidePageRoute(
+                    page: HistoryPage(),
+                    direction: AxisDirection.up, // or left, right, down
+                  ),
                 );
+
               },
             ),
           IconButton(
@@ -869,13 +844,11 @@ class _ChatBotScreenState extends State<ChatBotScreen>
                           bool isFirstInSequence = index == 0 ||
                               (messages[index].containsKey('bot') !=
                                   messages[index - 1].containsKey('bot'));
-
                           return Column(
                             crossAxisAlignment: isBot
                                 ? CrossAxisAlignment.start
                                 : CrossAxisAlignment.end,
                             children: [
-                              // Add username with avatar only for the first message in a sequence
                               if (isFirstInSequence)
                                 Padding(
                                   padding: EdgeInsets.only(
@@ -934,80 +907,69 @@ class _ChatBotScreenState extends State<ChatBotScreen>
                                     ? Alignment.centerLeft
                                     : Alignment.centerRight,
                                 child: Container(
+                                  margin: EdgeInsets.symmetric(
+                                      vertical: 2, horizontal: 8),
+                                  padding: EdgeInsets.symmetric(
+                                      horizontal: 10, vertical: 10),
                                   constraints: BoxConstraints(
                                     maxWidth:
                                         MediaQuery.of(context).size.width *
                                             0.75,
                                   ),
-                                  margin: EdgeInsets.only(
-                                      left: 12,
-                                      right: 12,
-                                      top: index > 0 &&
-                                              messages[index]
-                                                      .containsKey('bot') ==
-                                                  messages[index - 1]
-                                                      .containsKey('bot')
-                                          ? 2
-                                          : 2,
-                                      bottom: 2),
-                                  padding: EdgeInsets.all(12),
                                   decoration: BoxDecoration(
                                     color: isBot
                                         ? Colors.white
-                                        : Color(
-                                            0xFFDCF8C6), // Green for user, white for bot
-                                    borderRadius:
-                                        BorderRadius.circular(15).copyWith(
-                                      topLeft: isBot
-                                          ? Radius.circular(0)
-                                          : Radius.circular(15),
-                                      topRight: isBot
-                                          ? Radius.circular(15)
-                                          : Radius.circular(0),
+                                        : Color(0xFFDCF8C6),
+                                    borderRadius: BorderRadius.only(
+                                      topLeft: Radius.circular(isBot ? 0 : 12),
+                                      topRight: Radius.circular(isBot ? 12 : 0),
+                                      bottomLeft: Radius.circular(12),
+                                      bottomRight: Radius.circular(12),
                                     ),
                                     boxShadow: [
                                       BoxShadow(
                                         color: Colors.black.withOpacity(0.05),
-                                        spreadRadius: 1,
-                                        blurRadius: 3,
+                                        blurRadius: 2,
                                         offset: Offset(0, 1),
                                       ),
                                     ],
                                   ),
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
+                                  child: Stack(
                                     children: [
-                                      if (isBot)
-                                        SizedBox(height: isBot ? 4 : 0),
-                                      Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            isBot ? messages[index]['bot'] : messages[index]['user'],
-                                            style: TextStyle(
-                                              color: Colors.black87,
-                                              fontSize: 13,
-                                              height: 1.3,
-                                              fontFamily: 'Poppins',
-                                            ),
+                                      Padding(
+                                        padding: EdgeInsets.only(
+                                            right:
+                                                45), // leave space for timestamp
+                                        child: Text(
+                                          isBot
+                                              ? messages[index]['bot']
+                                              : messages[index]['user'],
+                                          style: TextStyle(
+                                            fontSize: 13,
+                                            fontFamily: 'Poppins',
+                                            color: Colors.black87,
+                                            height: 1.4,
                                           ),
-                                          SizedBox(height: 4),
-                                          Text(
-                                            _formatTimestamp(messages[index]['timestamp']),
-                                            style: TextStyle(
-                                              color: Colors.grey[600],
-                                              fontSize: 9,
-                                              fontFamily: 'Poppins',
-                                            ),
-                                          ),
-                                        ],
+                                        ),
                                       ),
-
+                                      Positioned(
+                                        bottom: 0,
+                                        right: 0,
+                                        child: Text(
+                                          _formatTimestamp(
+                                              messages[index]['timestamp']),
+                                          style: TextStyle(
+                                            fontSize: 9,
+                                            color: Colors.grey[600],
+                                            fontFamily: 'Poppins',
+                                          ),
+                                        ),
+                                      ),
                                     ],
                                   ),
                                 ),
                               ),
+
                               if (isBot &&
                                   index == messages.length - 1 &&
                                   getOptions().isNotEmpty)
@@ -1158,8 +1120,21 @@ class _ChatBotScreenState extends State<ChatBotScreen>
     );
   }
 }
+
 String _formatTimestamp(String timestamp) {
   final DateTime dateTime = DateTime.parse(timestamp);
   final String formattedTime = DateFormat('h:mm a').format(dateTime);
   return formattedTime;
+}
+
+String getFormattedDate(DateTime date) {
+  final now = DateTime.now();
+  final today = DateTime(now.year, now.month, now.day);
+  final aDate = DateTime(date.year, date.month, date.day);
+  final difference = aDate.difference(today).inDays;
+
+  if (difference == 0) return 'Today';
+  if (difference == -1) return 'Yesterday';
+  if (difference == 1) return 'Tomorrow';
+  return DateFormat('EEEE, MMMM d').format(date); // e.g., Monday, May 5
 }

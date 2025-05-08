@@ -8,18 +8,32 @@ class SlidePageRoute extends PageRouteBuilder {
       : super(
     pageBuilder: (context, animation, secondaryAnimation) => page,
     transitionsBuilder: (context, animation, secondaryAnimation, child) {
-      const offsetMap = {
-        AxisDirection.up: Offset(0, 1),
-        AxisDirection.down: Offset(0, -1),
-        AxisDirection.left: Offset(1, 0),
-        AxisDirection.right: Offset(-1, 0),
-      };
-      final begin = offsetMap[direction]!;
-      final end = Offset.zero;
-      final tween = Tween(begin: begin, end: end)
-          .chain(CurveTween(curve: Curves.ease));
+      Offset beginOffset;
 
-      return SlideTransition(position: animation.drive(tween), child: child);
+      switch (direction) {
+        case AxisDirection.up:
+          beginOffset = Offset(0.0, 1.0);
+          break;
+        case AxisDirection.down:
+          beginOffset = Offset(0.0, -1.0);
+          break;
+        case AxisDirection.left:
+          beginOffset = Offset(1.0, 0.0);
+          break;
+        case AxisDirection.right:
+        default:
+          beginOffset = Offset(-1.0, 0.0);
+          break;
+      }
+
+      return SlideTransition(
+        position: animation.drive(
+          Tween(begin: beginOffset, end: Offset.zero).chain(
+            CurveTween(curve: Curves.ease),
+          ),
+        ),
+        child: child,
+      );
     },
   );
 }

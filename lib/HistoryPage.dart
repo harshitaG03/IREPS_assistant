@@ -1,9 +1,7 @@
+import 'package:assistant/AttachDocumentsPage.dart';
+import 'package:assistant/chatbot_UI.dart';
 import 'package:flutter/material.dart';
-import 'package:path/path.dart' as path;
-import 'AttachDocumentsPage.dart';
-import 'database_helper.dart';
-import 'chatbot_UI.dart';
-
+import 'package:assistant/database_helper.dart';
 import 'package:intl/intl.dart';
 
 class HistoryPage extends StatefulWidget {
@@ -34,26 +32,33 @@ class _HistoryPageState extends State<HistoryPage> {
     setState(() {
       isLoading = true;
     });
+
+    // Include the date_created field in the query results
     final queries = await dbHelper.query('queries', orderBy: 'id DESC');
+
     Map<String, Map<String, dynamic>> usersMap = {};
     Map<String, Map<String, dynamic>> vendorsMap = {};
     Map<String, Map<String, dynamic>> railwayUsersMap = {};
     Map<String, List<Map<String, dynamic>>> docsMap = {};
     DateTime? mostRecent;
+
     // Fetch details for each query
     for (var query in queries) {
       final queryId = query['query_id'];
       final userId = query['user_id'];
+
       // Check if this query has a timestamp and update mostRecent if needed
-      if (query['created_at'] != null) {
+      if (query['date_created'] != null) {
         try {
-          final queryTime = DateTime.parse(query['created_at']);
+          final queryTime = DateTime.parse(query['date_created']);
           if (mostRecent == null || queryTime.isAfter(mostRecent)) {
             mostRecent = queryTime;
           }
         } catch (e) {
+          print("Error parsing date: $e");
         }
       }
+
       // Get user details
       if (userId != null) {
         final userList = await dbHelper.query(
@@ -88,12 +93,14 @@ class _HistoryPageState extends State<HistoryPage> {
           }
         }
       }
+
       // Get documents for this query
       final docs = await dbHelper.query(
         'document_attachments',
         where: 'query_id = ?',
         whereArgs: [queryId],
       );
+
       // Check if any document is more recent than current mostRecent
       for (var doc in docs) {
         if (doc['date_attached'] != null) {
@@ -103,11 +110,13 @@ class _HistoryPageState extends State<HistoryPage> {
               mostRecent = docTime;
             }
           } catch (e) {
+            print("Error parsing doc date: $e");
           }
         }
       }
       docsMap[queryId] = docs;
     }
+
     setState(() {
       queryHistory = queries;
       filteredHistory = queries; // default to full list
@@ -119,6 +128,7 @@ class _HistoryPageState extends State<HistoryPage> {
       isLoading = false;
     });
   }
+
   void _filterHistory(String input) {
     if (input.isEmpty) {
       setState(() => filteredHistory = queryHistory);
@@ -133,13 +143,24 @@ class _HistoryPageState extends State<HistoryPage> {
       });
     }
   }
-  String _formatDateTime(String? dateTimeStr) {
-    if (dateTimeStr == null || dateTimeStr.isEmpty) return 'N/A';
+
+  // Update the _formatDateTime method to properly handle different date formats
+  String _formatDateTime(String? dateTime) {
+    if (dateTime == null || dateTime.isEmpty) return "No date available";
     try {
-      final dateTime = DateTime.parse(dateTimeStr);
-      return DateFormat('dd-MM-yyyy hh:mm a').format(dateTime);
+      DateTime parsed;
+      // Try to parse ISO format first (which is likely used when storing dates)
+      if (dateTime.contains('T') || dateTime.contains('-')) {
+        parsed = DateTime.parse(dateTime);
+      } else {
+        // Fallback to your custom format
+        parsed = DateFormat("dd-MM-yyyy HH:mm").parse(dateTime);
+      }
+      // Format the date in a user-friendly way
+      return DateFormat('dd-MM-yyyy HH:mm').format(parsed);
     } catch (e) {
-      return dateTimeStr; // Return original if parsing fails
+      print("Error parsing date: $e");
+      return "No date available";
     }
   }
   // Check if a given date string is within 24 hours of the most recent update
@@ -153,10 +174,12 @@ class _HistoryPageState extends State<HistoryPage> {
       return false;
     }
   }
+
   // Check if this is the most recent query
   bool _isLatestQuery(int index) {
     return index == 0; // Since queries are ordered by ID DESC
   }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -215,6 +238,7 @@ class _HistoryPageState extends State<HistoryPage> {
                 final vendor = vendorDetails[queryId];
                 final railway = railwayDetails[queryId];
                 final queryDocs = documents[queryId] ?? [];
+
                 // Check if this is the latest query or has recently updated docs
                 final isLatest = _isLatestQuery(index);
                 bool hasRecentDocs = false;
@@ -224,6 +248,13 @@ class _HistoryPageState extends State<HistoryPage> {
                     break;
                   }
                 }
+
+                // Get date directly from the query object
+                final dateCreated = query['date_created'];
+                final formattedDate = dateCreated != null
+                    ? _formatDateTime(dateCreated)
+                    : "No date available";
+
                 return Card(
                   margin: EdgeInsets.symmetric(
                       horizontal: 12, vertical: 6),
@@ -238,9 +269,9 @@ class _HistoryPageState extends State<HistoryPage> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // Header section
+                            // Header section with date
                             Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Text(
                                   "${index + 1}. Query ID: $queryId",
@@ -249,9 +280,18 @@ class _HistoryPageState extends State<HistoryPage> {
                                     fontSize: 16,
                                     color: Colors.black87,
                                   ),
-                                )
+                                ),
+                                Text(
+                                  formattedDate,
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.grey[600],
+                                  ),
+                                ),
                               ],
                             ),
+
+                            // User details section
                             if (user != null) ...[
                               Container(
                                 padding: EdgeInsets.all(8),
@@ -296,6 +336,8 @@ class _HistoryPageState extends State<HistoryPage> {
                                 ),
                               ),
                             ],
+
+                            // Vendor details section
                             if (vendor != null) ...[
                               Container(
                                 padding: EdgeInsets.all(8),
@@ -320,21 +362,35 @@ class _HistoryPageState extends State<HistoryPage> {
                                       ],
                                     ),
                                     SizedBox(height: 4),
-                                    DetailRow(
-                                      title: "Firm Name",
-                                      value:
-                                      vendor['firm_name'] ?? 'N/A',
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          child: DetailRow(
+                                            title: "Firm Name",
+                                            value: vendor['firm_name'] ?? 'N/A',
+                                          ),
+                                        ),
+                                        SizedBox(width: 8),
+                                        Expanded(
+                                          child: DetailRow(
+                                            title: "User Name",
+                                            value: vendor['user_name'] ?? 'N/A',
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ],
                                 ),
                               ),
                               SizedBox(height: 8),
                             ],
+
+                            // Railway user details section
                             if (railway != null) ...[
                               Container(
                                 padding: EdgeInsets.all(8),
                                 decoration: BoxDecoration(
-                                  color: Colors.blue[50],
+                                  color: Colors.amber[50],
                                   borderRadius:
                                   BorderRadius.circular(8),
                                 ),
@@ -348,7 +404,7 @@ class _HistoryPageState extends State<HistoryPage> {
                                           "Railway User Details",
                                           style: TextStyle(
                                             fontWeight: FontWeight.bold,
-                                            color: Colors.blue[800],
+                                            color: Colors.amber[800],
                                           ),
                                         ),
                                       ],
@@ -406,50 +462,49 @@ class _HistoryPageState extends State<HistoryPage> {
                               ),
                               SizedBox(height: 8),
                             ],
+
+                            // Documents section
                             Container(
-                              padding: EdgeInsets.all(8),
+                              padding: EdgeInsets.all(4),
                               decoration: BoxDecoration(
                                 color: Colors.green[50],
-                                borderRadius: BorderRadius.circular(8),
+                                borderRadius: BorderRadius.circular(6),
                               ),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Text(
-                                        queryDocs.isEmpty
-                                            ? "No documents attached"
-                                            : "Attached Documents",
-                                        style: TextStyle(
-                                          fontStyle:
-                                          queryDocs.isEmpty ? FontStyle.italic : FontStyle.normal,
-                                          color: Colors.grey[600],
-                                          fontWeight:
-                                          queryDocs.isEmpty ? FontWeight.normal : FontWeight.w600,
+                                  if (queryDocs.isEmpty)
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Text(
+                                          "No documents attached",
+                                          style: TextStyle(
+                                            fontStyle: FontStyle.italic,
+                                            color: Colors.grey[600],
+                                          ),
                                         ),
-                                      ),
-                                      IconButton(
-                                        icon: Icon(
-                                          Icons.add_circle_outline,
-                                          color: Colors.green[800],
-                                          size: 20,
+                                        IconButton(
+                                          icon: Icon(
+                                            Icons.add_circle_outline,
+                                            color: Colors.green[800],
+                                            size: 20,
+                                          ),
+                                          onPressed: () {
+                                            Navigator.push(
+                                              context,
+                                              MaterialPageRoute(
+                                                builder: (context) =>
+                                                    AttachDocumentsPage(queryId: queryId),
+                                              ),
+                                            ).then((_) => _loadHistory());
+                                          },
+                                          constraints: BoxConstraints(),
+                                          padding: EdgeInsets.zero,
                                         ),
-                                        onPressed: () {
-                                          Navigator.push(
-                                            context,
-                                            MaterialPageRoute(
-                                              builder: (context) =>
-                                                  AttachDocumentsPage(queryId: queryId),
-                                            ),
-                                          ).then((_) => _loadHistory());
-                                        },
-                                        constraints: BoxConstraints(),
-                                        padding: EdgeInsets.zero,
-                                      ),
-                                    ],
-                                  ),
+                                      ],
+                                    ),
+
                                   if (queryDocs.isNotEmpty)
                                     Column(
                                       children: queryDocs.map((doc) {
@@ -458,143 +513,81 @@ class _HistoryPageState extends State<HistoryPage> {
                                           color: isRecentDoc ? Colors.green[50] : null,
                                           elevation: 1,
                                           margin: EdgeInsets.only(bottom: 6),
-                                          child: Stack(
-                                            children: [
-                                              Padding(
-                                                padding: const EdgeInsets.all(8.0),
-                                                child: Row(
-                                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                                  children: [
-                                                    Icon(Icons.description,
-                                                        color: Colors.blue[700], size: 16),
-                                                    SizedBox(width: 8),
-                                                    Expanded(
-                                                      child: Column(
-                                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                                        children: [
-                                                          Text(
-                                                            doc['document_name'] ?? 'Unnamed document',
-                                                            style: TextStyle(fontWeight: FontWeight.w500),
-                                                          ),
-                                                          if (doc['document_description'] != null &&
-                                                              doc['document_description'].isNotEmpty)
-                                                            Text(
-                                                              "Description: ${doc['document_description']}",
-                                                              style: TextStyle(fontSize: 12),
-                                                            ),
-                                                          Text(
-                                                            "Attached: ${_formatDateTime(doc['date_attached'])}",
-                                                            style: TextStyle(
-                                                                color: Colors.grey[600], fontSize: 12),
-                                                          ),
-                                                        ],
+                                          child: Padding(
+                                            padding: const EdgeInsets.all(8.0),
+                                            child: Row(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                Icon(Icons.description, color: Colors.blue[700], size: 16),
+                                                SizedBox(width: 8),
+                                                Expanded(
+                                                  child: Column(
+                                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                                    children: [
+                                                      Text(
+                                                        doc['document_name'] ?? 'Unnamed document',
+                                                        style: TextStyle(fontWeight: FontWeight.w500),
                                                       ),
-                                                    ),
-                                                    Column(
-                                                      children: [
-                                                        IconButton(
-                                                          icon: Icon(Icons.file_download,
-                                                              color: Colors.green[700], size: 20),
-                                                          onPressed: () {
-                                                            ScaffoldMessenger.of(context).showSnackBar(
-                                                              SnackBar(
-                                                                content: Text(
-                                                                    "Opening document: ${doc['document_name']}"),
-                                                              ),
-                                                            );
-                                                          },
-                                                          constraints: BoxConstraints(),
-                                                          padding: EdgeInsets.zero,
+                                                      if (doc['document_description'] != null &&
+                                                          doc['document_description'].isNotEmpty)
+                                                        Text(
+                                                          "Description: ${doc['document_description']}",
+                                                          style: TextStyle(fontSize: 12),
                                                         ),
-                                                      ],
-                                                    ),
-                                                  ],
-                                                ),
-                                              ),
-                                              if (isRecentDoc)
-                                                Positioned(
-                                                  top: 0,
-                                                  right: 0,
-                                                  child: Container(
-                                                    padding:
-                                                    EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                                    decoration: BoxDecoration(
-                                                      color: Colors.green,
-                                                      borderRadius: BorderRadius.only(
-                                                        topRight: Radius.circular(4),
-                                                        bottomLeft: Radius.circular(4),
+                                                      Text(
+                                                        "Attached: ${_formatDateTime(doc['date_attached'])}",
+                                                        style:
+                                                        TextStyle(color: Colors.grey[600], fontSize: 12),
                                                       ),
-                                                    ),
-                                                    child: Text(
-                                                      'NEW',
-                                                      style: TextStyle(
-                                                        color: Colors.white,
-                                                        fontSize: 10,
-                                                        fontWeight: FontWeight.bold,
-                                                      ),
-                                                    ),
+                                                    ],
                                                   ),
                                                 ),
-                                            ],
+                                                // Download icon
+                                                IconButton(
+                                                  icon: Icon(Icons.file_download,
+                                                      color: Colors.green[700], size: 20),
+                                                  onPressed: () {
+                                                    ScaffoldMessenger.of(context).showSnackBar(
+                                                      SnackBar(
+                                                        content: Text(
+                                                            "Opening document: ${doc['document_name']}"),
+                                                      ),
+                                                    );
+                                                  },
+                                                  constraints: BoxConstraints(),
+                                                  padding: EdgeInsets.zero,
+                                                ),
+                                                // More icon
+                                                IconButton(
+                                                  icon: Icon(
+                                                    Icons.add_circle_outline,
+                                                    color: Colors.green[800],
+                                                    size: 20,
+                                                  ),
+                                                  onPressed: () {
+                                                    Navigator.push(
+                                                      context,
+                                                      MaterialPageRoute(
+                                                        builder: (context) =>
+                                                            AttachDocumentsPage(queryId: queryId),
+                                                      ),
+                                                    ).then((_) => _loadHistory());
+                                                  },
+                                                  constraints: BoxConstraints(),
+                                                  padding: EdgeInsets.zero,
+                                                ),
+                                              ],
+                                            ),
                                           ),
                                         );
                                       }).toList(),
-                                    ),
+                                    )
                                 ],
                               ),
                             )
-
                           ],
                         ),
                       ),
-                      // Latest query badge
-                      if (isLatest)
-                        Positioned(
-                          top: 0,
-                          right: 0,
-                          child: Container(
-                            padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: Colors.blue,
-                              borderRadius: BorderRadius.only(
-                                topRight: Radius.circular(12),
-                                bottomLeft: Radius.circular(8),
-                              ),
-                            ),
-                            child: Text(
-                              'LATEST',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ),
-                      // Recently updated badge for documents
-                      if (hasRecentDocs && !isLatest)
-                        Positioned(
-                          top: 0,
-                          right: 0,
-                          child: Container(
-                            padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: Colors.green,
-                              borderRadius: BorderRadius.only(
-                                topRight: Radius.circular(12),
-                                bottomLeft: Radius.circular(8),
-                              ),
-                            ),
-                            child: Text(
-                              'UPDATED',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ),
                     ],
                   ),
                 );
@@ -621,38 +614,37 @@ class _HistoryPageState extends State<HistoryPage> {
 class DetailRow extends StatelessWidget {
   final String title;
   final String value;
-  final double fontSize;
 
   const DetailRow({
+    Key? key,
     required this.title,
     required this.value,
-    this.fontSize = 14,
-  });
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            "$title: ",
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: fontSize,
-            ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title.toUpperCase(),
+          style: TextStyle(
+            fontSize: 13,
+            color: Colors.teal[700],
+            fontWeight: FontWeight.w600,
+            //letterSpacing: 0.5,
           ),
-          Expanded(
-            child: Text(
-              value,
-              style: TextStyle(fontSize: fontSize),
-              overflow: TextOverflow.ellipsis,
-              maxLines: 2,
-            ),
+        ),
+        //SizedBox(height: 2),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 11,
+            color: Colors.black87,
+            fontWeight: FontWeight.w600,
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
