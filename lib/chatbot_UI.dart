@@ -152,6 +152,17 @@ class _ChatBotScreenState extends State<ChatBotScreen>
       duration: Duration(milliseconds: 700),
       vsync: this,
     )..repeat();
+
+    // Add listener to scroll controller
+    _scrollController.addListener(() {
+      // If we're near the bottom, auto-scroll to bottom on any change
+      if (_scrollController.hasClients &&
+          _scrollController.position.pixels >
+              _scrollController.position.maxScrollExtent - 150) {
+        _scrollToBottom();
+      }
+    });
+
     resetChat();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       // This ensures scroll to bottom when the view is first built
@@ -300,17 +311,18 @@ class _ChatBotScreenState extends State<ChatBotScreen>
   void resetChat() {
     setState(() {
       messages.clear();
-      // Simulate a more natural conversation flow with greeting
       _showTypingIndicator();
-      Future.delayed(Duration(seconds: 1), () {
+
+      Future.delayed(Duration(milliseconds: 300), () {
         setState(() {
           isTyping = false;
           messages.add({
             'bot': "Hey! I'm your IREPS Assistant. How can I help you today?",
             'timestamp': DateTime.now().toString(),
           });
-          _showTypingIndicator();
-          Future.delayed(Duration(seconds: 1), () {
+          _scrollToBottom();
+
+          Future.delayed(Duration(milliseconds: 300), () {
             setState(() {
               isTyping = false;
               messages.add({
@@ -328,54 +340,12 @@ class _ChatBotScreenState extends State<ChatBotScreen>
   void _showTypingIndicator() {
     setState(() {
       isTyping = true;
-      _scrollToBottom();
     });
+
+    // Always scroll after showing typing indicator
+    _scrollToBottom();
   }
-  // void _generateQueryId() async {
-  //   setState(() {
-  //     _queryId = "QID${Random().nextInt(100000)}";
-  //   });
-  //   messages.add({
-  //     'bot': "Query Submitted Successfully.\n\n"
-  //         "Query ID: $_queryId\n"
-  //         "Email: $userEmail\n"
-  //         "Mobile No: $mobileNo\n"
-  //         "${designation != null && designation!.isNotEmpty ? 'Designation: $designation\n' : ''}"
-  //         "Date: $currentDate\n"
-  //         "Query Description: $queryDescription",
-  //     'timestamp': DateTime.now().toString(),
-  //   });
-  //   messages.add({
-  //     'bot': "Would you like to attach documents to this query?",
-  //     'timestamp': DateTime.now().toString(),
-  //   });
-  //   Map<String, dynamic> userData = {
-  //     'has_ireps_account': hasIrepsAccount.toString(),
-  //     'email': userEmail,
-  //     'mobile': mobileNo,
-  //     'department': userDepartment,
-  //     'firm_name': firmName,
-  //     'user_name': UserName,
-  //     'organization': organizationType,
-  //     'zone': zone,
-  //     'unit': unit,
-  //     'designation': designation,
-  //     'query_id': _queryId,
-  //     'query_type': queryType,
-  //     'subject': subject,
-  //     'query_description': queryDescription
-  //   };
-  //   try {
-  //     await DatabaseHelper.instance.insertResponse(userData);
-  //   }
-  //   catch (e, stacktrace) {
-  //     print("Error saving query: $e");
-  //     print("Stacktrace: $stacktrace");
-  //     ScaffoldMessenger.of(context).showSnackBar(
-  //       SnackBar(content: Text("Failed to save query. Please try again.")),
-  //     );
-  //   }
-  // }
+
   void _generateQueryId() async {
     setState(() {
       _queryId = "QID${Random().nextInt(100000)}";
@@ -399,9 +369,12 @@ class _ChatBotScreenState extends State<ChatBotScreen>
         'timestamp': DateTime.now().toString(),
       });
       currentQuestion = "attachDocuments";
+
+      // Force scroll after adding messages
+      _scrollToBottom();
     });
 
-    // Attempt to save query to database
+    // Database operations
     Map<String, dynamic> userData = {
       'has_ireps_account': hasIrepsAccount.toString(),
       'email': userEmail,
@@ -425,18 +398,17 @@ class _ChatBotScreenState extends State<ChatBotScreen>
       print("Error saving query: $e");
     }
   }
-
-  void _scrollToBottom() {
-    if (_scrollController.hasClients) {
-      _scrollController.animateTo(
-        _scrollController.position.maxScrollExtent,
-        duration: Duration(milliseconds: 300),
-        curve: Curves.easeOut,
-      );
-    } else {
-      // If controller not attached yet, delay the scroll
-      Future.delayed(Duration(milliseconds: 100), _scrollToBottom);
-    }
+    void _scrollToBottom() {
+    // Add a small delay to ensure the UI has updated before scrolling
+    Future.delayed(Duration(milliseconds: 50), () {
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent + 100, // Add extra padding
+          duration: Duration(milliseconds: 200),
+          curve: Curves.easeOut,
+        );
+      }
+    });
   }
   void handleUserResponse(String response) {
     setState(() {
@@ -447,10 +419,12 @@ class _ChatBotScreenState extends State<ChatBotScreen>
       userInputController.clear();
       _showTypingIndicator();
     });
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _scrollToBottom();
-    });
-    Future.delayed(Duration(milliseconds: 800), () async {
+
+    // Force scroll immediately after user's message
+    _scrollToBottom();
+
+    // Process the response with reduced delay
+    Future.delayed(Duration(milliseconds: 300), () async {
       setState(() {
         isTyping = false;
       });
@@ -465,14 +439,17 @@ class _ChatBotScreenState extends State<ChatBotScreen>
       } else if (currentQuestion == "zone") {
         zone = response;
       }
-    });
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+
+      // Force scroll again after processing response
       _scrollToBottom();
     });
   }
+
   void _delayedBotResponse(String message, int delay, {String? nextQuestion}) {
     _showTypingIndicator();
-    Future.delayed(Duration(milliseconds: delay), () {
+
+    // Reduce the delay to make responses appear faster
+    Future.delayed(Duration(milliseconds: delay < 500 ? delay : 500), () {
       setState(() {
         isTyping = false;
         messages.add({
@@ -482,8 +459,8 @@ class _ChatBotScreenState extends State<ChatBotScreen>
         if (nextQuestion != null) {
           currentQuestion = nextQuestion;
         }
-      });
-      WidgetsBinding.instance.addPostFrameCallback((_) {
+
+        // Force scroll immediately within this setState callback
         _scrollToBottom();
       });
     });
@@ -970,51 +947,49 @@ class _ChatBotScreenState extends State<ChatBotScreen>
                                 ),
                               ),
 
-                              if (isBot &&
-                                  index == messages.length - 1 &&
-                                  getOptions().isNotEmpty)
+                              // Replace the existing options rendering code with this improved version
+                              if (isBot && index == messages.length - 1 && getOptions().isNotEmpty)
                                 (() {
                                   List<String> options = getOptions();
                                   return Padding(
-                                    padding: EdgeInsets.symmetric(
-                                        horizontal: 10, vertical: 8),
+                                    padding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                                     child: Wrap(
                                       spacing: 8,
                                       runSpacing: 8,
                                       children: options.map((option) {
-                                        return Container(
-                                          padding: EdgeInsets.symmetric(
-                                              horizontal: 10, vertical: 6),
-                                          decoration: BoxDecoration(
-                                            color: Colors.white,
-                                            borderRadius:
-                                                BorderRadius.circular(18),
-                                            border: Border.all(
-                                                color: Color(0xFF075E54),
-                                                width: 1),
-                                            boxShadow: [
-                                              BoxShadow(
-                                                color: Colors.black
-                                                    .withOpacity(0.05),
-                                                spreadRadius: 1,
-                                                blurRadius: 2,
-                                                offset: Offset(0, 1),
-                                              ),
-                                            ],
-                                          ),
+                                        return Material(
+                                          color: Colors.transparent,
                                           child: InkWell(
-                                            borderRadius:
-                                                BorderRadius.circular(18),
-                                            onTap: () =>
-                                                handleUserResponse(option),
-                                            child: Text(
-                                              option,
-                                              style: TextStyle(
-                                                color: Color(0xFF075E54),
-                                                fontWeight: FontWeight.w500,
-                                                fontSize: 10,
+                                            borderRadius: BorderRadius.circular(18),
+                                            onTap: () => handleUserResponse(option),
+                                            splashColor: Color(0xFF075E54).withOpacity(0.2),
+                                            highlightColor: Color(0xFF075E54).withOpacity(0.1),
+                                            child: Ink(
+                                              decoration: BoxDecoration(
+                                                color: Colors.white,
+                                                borderRadius: BorderRadius.circular(18),
+                                                border: Border.all(color: Color(0xFF075E54), width: 1),
+                                                boxShadow: [
+                                                  BoxShadow(
+                                                    color: Colors.black.withOpacity(0.05),
+                                                    spreadRadius: 1,
+                                                    blurRadius: 2,
+                                                    offset: Offset(0, 1),
+                                                  ),
+                                                ],
                                               ),
-                                              textAlign: TextAlign.center,
+                                              child: Container(
+                                                padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                                child: Text(
+                                                  option,
+                                                  style: TextStyle(
+                                                    color: Color(0xFF075E54),
+                                                    fontWeight: FontWeight.w500,
+                                                    fontSize: 12,
+                                                  ),
+                                                  textAlign: TextAlign.center,
+                                                ),
+                                              ),
                                             ),
                                           ),
                                         );

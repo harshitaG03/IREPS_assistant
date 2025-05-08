@@ -179,7 +179,7 @@ class _AttachDocumentsPageState extends State<AttachDocumentsPage> {
             child: Column(
               children: [
                 Container(
-                  padding: EdgeInsets.all(16),
+                  padding: EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     color: Colors.blue[50],
                     borderRadius: BorderRadius.circular(12),
@@ -188,23 +188,23 @@ class _AttachDocumentsPageState extends State<AttachDocumentsPage> {
                   child: Row(
                     children: [
                       Icon(Icons.info_outline, color: Colors.blue[700]),
-                      SizedBox(width: 10),
+                      SizedBox(width: 5),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
                               "Query ID: ${widget.queryId}",
-                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
                             ),
-                            SizedBox(height: 4),
-                            Text(
-                              "Only PDF documents are allowed",
-                              style: TextStyle(
-                                color: Colors.blue[700],
-                                fontStyle: FontStyle.italic,
-                              ),
-                            ),
+                            // SizedBox(height: 4),
+                            // Text(
+                            //   "Only PDF documents are allowed",
+                            //   style: TextStyle(
+                            //     color: Colors.blue[700],
+                            //     fontStyle: FontStyle.italic,
+                            //   ),
+                            // ),
                           ],
                         ),
                       ),

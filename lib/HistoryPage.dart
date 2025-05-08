@@ -285,7 +285,7 @@ class _HistoryPageState extends State<HistoryPage> {
                                   formattedDate,
                                   style: TextStyle(
                                     fontSize: 14,
-                                    color: Colors.grey[600],
+                                    color: Colors.pink[600],
                                   ),
                                 ),
                               ],
@@ -616,35 +616,37 @@ class DetailRow extends StatelessWidget {
   final String value;
 
   const DetailRow({
-    Key? key,
     required this.title,
     required this.value,
+    Key? key,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title.toUpperCase(),
-          style: TextStyle(
-            fontSize: 13,
-            color: Colors.teal[700],
-            fontWeight: FontWeight.w600,
-            //letterSpacing: 0.5,
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8.0), // Space below each DetailRow
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title.toUpperCase(),
+            style: TextStyle(
+              fontSize: 13,
+              color: Colors.teal[700],
+              fontWeight: FontWeight.w600,
+            ),
           ),
-        ),
-        //SizedBox(height: 2),
-        Text(
-          value,
-          style: TextStyle(
-            fontSize: 11,
-            color: Colors.black87,
-            fontWeight: FontWeight.w600,
+          //SizedBox(height: 2), // Small space between title and value
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 11,
+              color: Colors.black87,
+              fontWeight: FontWeight.w600,
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
