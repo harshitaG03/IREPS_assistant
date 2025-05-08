@@ -4,7 +4,6 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 
-
 class AttachDocumentsPage extends StatefulWidget {
   final String queryId;
 
@@ -195,7 +194,8 @@ class _AttachDocumentsPageState extends State<AttachDocumentsPage> {
                           children: [
                             Text(
                               "Query ID: ${widget.queryId}",
-                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                              style: TextStyle(
+                                  fontWeight: FontWeight.bold, fontSize: 15),
                             ),
                             // SizedBox(height: 4),
                             // Text(
@@ -229,7 +229,8 @@ class _AttachDocumentsPageState extends State<AttachDocumentsPage> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
                                     "Document ${index + 1}",
@@ -241,7 +242,8 @@ class _AttachDocumentsPageState extends State<AttachDocumentsPage> {
                                   ),
                                   if (index > 0)
                                     IconButton(
-                                      icon: Icon(Icons.delete, color: Colors.red),
+                                      icon:
+                                          Icon(Icons.delete, color: Colors.red),
                                       onPressed: () {
                                         setState(() {
                                           documents.removeAt(index);
@@ -253,9 +255,10 @@ class _AttachDocumentsPageState extends State<AttachDocumentsPage> {
                               SizedBox(height: 10),
                               ElevatedButton.icon(
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: documents[index]['file'] != null
-                                      ? Colors.green
-                                      : Colors.blue,
+                                  backgroundColor:
+                                      documents[index]['file'] != null
+                                          ? Colors.green
+                                          : Colors.blue,
                                   foregroundColor: Colors.white,
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(10),
@@ -266,27 +269,27 @@ class _AttachDocumentsPageState extends State<AttachDocumentsPage> {
                                     documents[index]['file'] != null
                                         ? Icons.check_circle
                                         : Icons.attach_file,
-                                    color: Colors.white
-                                ),
-                                label: Text(
-                                    documents[index]['file'] != null
-                                        ? "Change PDF"
-                                        : "Select PDF"
-                                ),
+                                    color: Colors.white),
+                                label: Text(documents[index]['file'] != null
+                                    ? "Change PDF"
+                                    : "Select PDF"),
                               ),
                               if (documents[index]['file'] != null)
                                 Padding(
                                   padding: const EdgeInsets.only(top: 8.0),
                                   child: Container(
-                                    padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                    padding: EdgeInsets.symmetric(
+                                        horizontal: 10, vertical: 6),
                                     decoration: BoxDecoration(
                                       color: Colors.green[50],
                                       borderRadius: BorderRadius.circular(6),
-                                      border: Border.all(color: Colors.green[200]!),
+                                      border:
+                                          Border.all(color: Colors.green[200]!),
                                     ),
                                     child: Row(
                                       children: [
-                                        Icon(Icons.picture_as_pdf, color: Colors.red, size: 20),
+                                        Icon(Icons.picture_as_pdf,
+                                            color: Colors.red, size: 20),
                                         SizedBox(width: 8),
                                         Expanded(
                                           child: Text(
@@ -343,13 +346,18 @@ class _AttachDocumentsPageState extends State<AttachDocumentsPage> {
                     ),
                     ElevatedButton.icon(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: _hasValidDocuments() ? Colors.green[700] : Colors.grey[600],
+                        backgroundColor: _hasValidDocuments()
+                            ? Colors.green[700]
+                            : Colors.grey[600],
                         foregroundColor: Colors.white,
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(10)),
-                        padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                        padding:
+                            EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                       ),
-                      onPressed: _isSubmitting || !_hasValidDocuments() ? null : saveDocuments,
+                      onPressed: _isSubmitting || !_hasValidDocuments()
+                          ? null
+                          : saveDocuments,
                       icon: Icon(Icons.save, color: Colors.white),
                       label: Text("Save Documents"),
                     ),

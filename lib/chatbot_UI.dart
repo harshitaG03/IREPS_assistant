@@ -6,9 +6,11 @@ import './slide_page_route.dart';
 import 'package:flutter/material.dart';
 import 'database_helper.dart';
 import 'package:intl/intl.dart';
+
 void main() {
   runApp(ChatbotApp());
 }
+
 class ChatbotApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
@@ -23,10 +25,12 @@ class ChatbotApp extends StatelessWidget {
     );
   }
 }
+
 class ChatBotScreen extends StatefulWidget {
   @override
   _ChatBotScreenState createState() => _ChatBotScreenState();
 }
+
 class _ChatBotScreenState extends State<ChatBotScreen>
     with TickerProviderStateMixin {
   final TextEditingController _controller = TextEditingController();
@@ -169,12 +173,14 @@ class _ChatBotScreenState extends State<ChatBotScreen>
       _scrollToBottom();
     });
   }
+
   void dispose() {
     _scrollController.dispose();
     userInputController.dispose();
     _typingDotsController.dispose();
     super.dispose();
   }
+
   void goToPreviousMessage() {
     setState(() {
       if (messages.length >= 2) {
@@ -185,6 +191,7 @@ class _ChatBotScreenState extends State<ChatBotScreen>
       }
     });
   }
+
   String getPreviousQuestion() {
     if (messages.isNotEmpty) {
       var lastBotMessage = messages.last['bot'];
@@ -218,6 +225,7 @@ class _ChatBotScreenState extends State<ChatBotScreen>
     }
     return "initial";
   }
+
   String getQuestionText(String questionKey) {
     switch (questionKey) {
       case "hasAccount":
@@ -250,6 +258,7 @@ class _ChatBotScreenState extends State<ChatBotScreen>
         return "Hey! I'm your IREPS Assistant. How can I help you today?";
     }
   }
+
   List<String> getOptions() {
     if (currentQuestion == "subject" && queryType != null) {
       return subjectOptions[queryType!] ?? [];
@@ -308,6 +317,7 @@ class _ChatBotScreenState extends State<ChatBotScreen>
         return [];
     }
   }
+
   void resetChat() {
     setState(() {
       messages.clear();
@@ -337,6 +347,7 @@ class _ChatBotScreenState extends State<ChatBotScreen>
       });
     });
   }
+
   void _showTypingIndicator() {
     setState(() {
       isTyping = true;
@@ -398,7 +409,8 @@ class _ChatBotScreenState extends State<ChatBotScreen>
       print("Error saving query: $e");
     }
   }
-    void _scrollToBottom() {
+
+  void _scrollToBottom() {
     // Add a small delay to ensure the UI has updated before scrolling
     Future.delayed(Duration(milliseconds: 50), () {
       if (_scrollController.hasClients) {
@@ -410,6 +422,7 @@ class _ChatBotScreenState extends State<ChatBotScreen>
       }
     });
   }
+
   void handleUserResponse(String response) {
     setState(() {
       messages.add({
@@ -465,6 +478,7 @@ class _ChatBotScreenState extends State<ChatBotScreen>
       });
     });
   }
+
   Future<void> processNextStep(String response) async {
     switch (currentQuestion) {
       case "hasAccount":
@@ -504,8 +518,7 @@ class _ChatBotScreenState extends State<ChatBotScreen>
                       " Username: $UserName\n"
                       " Department: $userDepartment",
                       700);
-                }
-                else if (userDepartment == "Railway/Departmental User") {
+                } else if (userDepartment == "Railway/Departmental User") {
                   List<Map<String, dynamic>> railwayData = await DatabaseHelper
                       .instance
                       .query('railway_user_details',
@@ -669,12 +682,12 @@ class _ChatBotScreenState extends State<ChatBotScreen>
         break;
       case "queryDescription":
         if (response.trim().length < 20) {
-          setState(() {
-            messages.add({
-              'bot':
-                  "Please enter at least 20 characters in the Description field."
-            });
-          });
+          _delayedBotResponse(
+              "Please enter at least 20 characters in the Description field.",
+              700,
+              nextQuestion:
+                  "queryDescription" // Keep same question to allow retry
+              );
         } else {
           queryDescription = response.trim();
           // Ask for confirmation in chat instead of dialog
@@ -729,28 +742,33 @@ class _ChatBotScreenState extends State<ChatBotScreen>
         break;
     }
   }
+
   bool _isValidEmail(String? email) {
     if (email == null) return false;
     final emailRegex =
         RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
     return emailRegex.hasMatch(email);
   }
+
   bool _isValidMobile(String mobile) {
     RegExp regex = RegExp(
         r'^[6-9]\d{9}$'); // Matches exactly 10-digit numbers starting with 6-9
     return regex.hasMatch(mobile) && mobile.length == 10;
   }
+
   bool _isValidUserName(String UserName) {
     final RegExp regex =
         RegExp(r'^[a-zA-Z][a-zA-Z0-9 _@#\$%\^\&\*\(\)\-]{2,19}$');
     return regex.hasMatch(UserName);
   }
+
   Widget build(BuildContext context) {
     void clearCurrentAnswer() {
       setState(() {
         userInputController.clear();
       });
     }
+
     userInputController.clear();
     return Scaffold(
       appBar: AppBar(
@@ -786,7 +804,6 @@ class _ChatBotScreenState extends State<ChatBotScreen>
                     direction: AxisDirection.up, // or left, right, down
                   ),
                 );
-
               },
             ),
           IconButton(
@@ -867,7 +884,7 @@ class _ChatBotScreenState extends State<ChatBotScreen>
                                         ),
                                         SizedBox(width: 6),
                                         CircleAvatar(
-                                          backgroundColor: Color(0xFF128C7E),
+                                          backgroundColor: Color(0xFF075E54),
                                           radius: 12,
                                           child: Icon(
                                             Icons.person,
@@ -897,6 +914,7 @@ class _ChatBotScreenState extends State<ChatBotScreen>
                                     color: isBot
                                         ? Colors.white
                                         : Color(0xFFDCF8C6),
+                                    // : Color(0xFFA0D6CE),
                                     borderRadius: BorderRadius.only(
                                       topLeft: Radius.circular(isBot ? 0 : 12),
                                       topRight: Radius.circular(isBot ? 12 : 0),
@@ -948,11 +966,14 @@ class _ChatBotScreenState extends State<ChatBotScreen>
                               ),
 
                               // Replace the existing options rendering code with this improved version
-                              if (isBot && index == messages.length - 1 && getOptions().isNotEmpty)
+                              if (isBot &&
+                                  index == messages.length - 1 &&
+                                  getOptions().isNotEmpty)
                                 (() {
                                   List<String> options = getOptions();
                                   return Padding(
-                                    padding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                    padding: EdgeInsets.symmetric(
+                                        horizontal: 10, vertical: 8),
                                     child: Wrap(
                                       spacing: 8,
                                       runSpacing: 8,
@@ -960,18 +981,26 @@ class _ChatBotScreenState extends State<ChatBotScreen>
                                         return Material(
                                           color: Colors.transparent,
                                           child: InkWell(
-                                            borderRadius: BorderRadius.circular(18),
-                                            onTap: () => handleUserResponse(option),
-                                            splashColor: Color(0xFF075E54).withOpacity(0.2),
-                                            highlightColor: Color(0xFF075E54).withOpacity(0.1),
+                                            borderRadius:
+                                                BorderRadius.circular(18),
+                                            onTap: () =>
+                                                handleUserResponse(option),
+                                            splashColor: Color(0xFF075E54)
+                                                .withOpacity(0.2),
+                                            highlightColor: Color(0xFF075E54)
+                                                .withOpacity(0.1),
                                             child: Ink(
                                               decoration: BoxDecoration(
                                                 color: Colors.white,
-                                                borderRadius: BorderRadius.circular(18),
-                                                border: Border.all(color: Color(0xFF075E54), width: 1),
+                                                borderRadius:
+                                                    BorderRadius.circular(18),
+                                                border: Border.all(
+                                                    color: Color(0xFF075E54),
+                                                    width: 1),
                                                 boxShadow: [
                                                   BoxShadow(
-                                                    color: Colors.black.withOpacity(0.05),
+                                                    color: Colors.black
+                                                        .withOpacity(0.05),
                                                     spreadRadius: 1,
                                                     blurRadius: 2,
                                                     offset: Offset(0, 1),
@@ -979,7 +1008,9 @@ class _ChatBotScreenState extends State<ChatBotScreen>
                                                 ],
                                               ),
                                               child: Container(
-                                                padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                                padding: EdgeInsets.symmetric(
+                                                    horizontal: 10,
+                                                    vertical: 6),
                                                 child: Text(
                                                   option,
                                                   style: TextStyle(

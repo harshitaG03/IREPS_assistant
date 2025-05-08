@@ -86,7 +86,7 @@ class DatabaseHelper {
     ''');
 
     // Create queries table with date_created field
-    await db.execute(''' 
+    await db.execute('''
       CREATE TABLE queries (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER,
@@ -115,17 +115,17 @@ class DatabaseHelper {
 
   // General query method to run custom queries
   Future<List<Map<String, dynamic>>> query(
-      String table, {
-        bool? distinct,
-        List<String>? columns,
-        String? where,
-        List<dynamic>? whereArgs,
-        String? groupBy,
-        String? having,
-        String? orderBy,
-        int? limit,
-        int? offset,
-      }) async {
+    String table, {
+    bool? distinct,
+    List<String>? columns,
+    String? where,
+    List<dynamic>? whereArgs,
+    String? groupBy,
+    String? having,
+    String? orderBy,
+    int? limit,
+    int? offset,
+  }) async {
     final db = await instance.database;
 
     try {
@@ -249,11 +249,8 @@ class DatabaseHelper {
       // Start a transaction to ensure data integrity
       await db.transaction((txn) async {
         // Check if user with email already exists
-        List<Map<String, dynamic>> existingUsers = await txn.query(
-            'users',
-            where: 'email = ?',
-            whereArgs: [response['email']]
-        );
+        List<Map<String, dynamic>> existingUsers = await txn
+            .query('users', where: 'email = ?', whereArgs: [response['email']]);
 
         int userId;
 
@@ -274,7 +271,8 @@ class DatabaseHelper {
           await txn.update(
               'users',
               {
-                'has_ireps_account': 'true', // Set to true since now they have an account
+                'has_ireps_account':
+                    'true', // Set to true since now they have an account
                 'mobile': response['mobile'],
                 'department': response['department']
               },
@@ -288,8 +286,7 @@ class DatabaseHelper {
           List<Map<String, dynamic>> existingVendor = await txn.query(
               'vendor_details',
               where: 'user_id = ?',
-              whereArgs: [userId]
-          );
+              whereArgs: [userId]);
 
           if (existingVendor.isEmpty) {
             await txn.insert(
@@ -319,8 +316,7 @@ class DatabaseHelper {
           List<Map<String, dynamic>> existingRailway = await txn.query(
               'railway_user_details',
               where: 'user_id = ?',
-              whereArgs: [userId]
-          );
+              whereArgs: [userId]);
 
           if (existingRailway.isEmpty) {
             await txn.insert(
@@ -330,7 +326,8 @@ class DatabaseHelper {
                   'organization': response['organization'],
                   'zone': response['zone'],
                   'unit': response['unit'],
-                  'designation': response['designation'] // Ensure designation is included
+                  'designation':
+                      response['designation'] // Ensure designation is included
                 },
                 conflictAlgorithm: ConflictAlgorithm.replace);
           } else {
@@ -340,7 +337,8 @@ class DatabaseHelper {
                   'organization': response['organization'],
                   'zone': response['zone'],
                   'unit': response['unit'],
-                  'designation': response['designation'] // Ensure designation is included
+                  'designation':
+                      response['designation'] // Ensure designation is included
                 },
                 where: 'user_id = ?',
                 whereArgs: [userId]);
@@ -366,7 +364,7 @@ class DatabaseHelper {
                 'query_type': response['query_type'],
                 'subject': response['subject'],
                 'query_description': response['query_description'],
-                'date_created': dateCreated  // Add the date_created field
+                'date_created': dateCreated // Add the date_created field
               },
               conflictAlgorithm: ConflictAlgorithm.replace);
         } else {
@@ -376,7 +374,7 @@ class DatabaseHelper {
                 'query_type': response['query_type'],
                 'subject': response['subject'],
                 'query_description': response['query_description'],
-                'date_created': dateCreated  // Update the date_created field
+                'date_created': dateCreated // Update the date_created field
               },
               where: 'query_id = ?',
               whereArgs: [response['query_id']]);
@@ -394,7 +392,7 @@ class DatabaseHelper {
     final db = await instance.database;
     try {
       List<Map<String, dynamic>> results =
-      await db.query('users', where: 'email = ?', whereArgs: [email]);
+          await db.query('users', where: 'email = ?', whereArgs: [email]);
       return results.isNotEmpty ? results.first : null;
     } catch (e) {
       print('Error getting user by email: $e');
@@ -402,12 +400,13 @@ class DatabaseHelper {
     }
   }
 
-  Future<List<Map<String, dynamic>>> getDocumentsByQueryId(String queryId) async {
+  Future<List<Map<String, dynamic>>> getDocumentsByQueryId(
+      String queryId) async {
     final db = await database;
     try {
       List<Map<String, dynamic>> docs = await db.query(
-        'document_attachments',  // Changed from 'documents' to 'document_attachments'
-        where: 'query_id = ?',   // Changed from 'query_id' to 'query_id'
+        'document_attachments', // Changed from 'documents' to 'document_attachments'
+        where: 'query_id = ?', // Changed from 'query_id' to 'query_id'
         whereArgs: [queryId],
       );
       print('Found ${docs.length} documents for query $queryId');
@@ -450,13 +449,13 @@ class DatabaseHelper {
     try {
       // Get list of all tables
       List<Map<String, dynamic>> tables = await db.rawQuery(
-          "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE 'android_%'"
-      );
+          "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE 'android_%'");
 
       // Count records in each table
       for (var table in tables) {
         String tableName = table['name'];
-        List<Map<String, dynamic>> count = await db.rawQuery('SELECT COUNT(*) as count FROM "$tableName"');
+        List<Map<String, dynamic>> count =
+            await db.rawQuery('SELECT COUNT(*) as count FROM "$tableName"');
         tableCounts[tableName] = count.first['count'];
       }
 
