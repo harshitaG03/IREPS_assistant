@@ -37,10 +37,11 @@ dependencies:
   cupertino_icons: ^1.0.8
   sqflite: ^2.3.0
   path_provider: ^2.1.1
-  file_picker:
+  file_picker: ^6.1.1
   intl: ^0.18.1
   path: ^1.8.3
   open_file: ^3.5.10
+  url_launcher: ^6.2.1
 
 dependency_overrides:
   file_picker:

@@ -197,14 +197,6 @@ class _AttachDocumentsPageState extends State<AttachDocumentsPage> {
                               style: TextStyle(
                                   fontWeight: FontWeight.bold, fontSize: 15),
                             ),
-                            // SizedBox(height: 4),
-                            // Text(
-                            //   "Only PDF documents are allowed",
-                            //   style: TextStyle(
-                            //     color: Colors.blue[700],
-                            //     fontStyle: FontStyle.italic,
-                            //   ),
-                            // ),
                           ],
                         ),
                       ),
