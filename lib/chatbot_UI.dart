@@ -1,5 +1,7 @@
 import 'dart:core';
 import 'dart:math';
+import 'package:open_file/open_file.dart';
+
 import './AttachDocumentsPage.dart';
 import './HistoryPage.dart';
 import './slide_page_route.dart';
@@ -565,7 +567,12 @@ class _ChatBotScreenState extends State<ChatBotScreen>
         var doc = documents[i];
         String docName = doc['document_name'] ?? doc['name'] ?? "Document ${i + 1}";
         String docDesc = doc['document_description'] ?? doc['description'] ?? "No description";
-        documentsText += "• $docName\n  Description: $docDesc\n";
+        String filePath = doc['file_path'] ?? doc['fileName'] ?? "";
+        if (filePath.isNotEmpty) {
+          documentsText += "• $docName\n  Description: $docDesc\n ($filePath)\n";
+        } else {
+          documentsText += "• $docName\n  Description: $docDesc\n";
+        }
       }
     } else {
       documentsText = "\n\n📎 **Attached Documents:** None";
@@ -609,7 +616,12 @@ class _ChatBotScreenState extends State<ChatBotScreen>
         var doc = documents[i];
         String docName = doc['document_name'] ?? doc['name'] ?? "Document ${i + 1}";
         String docDesc = doc['document_description'] ?? doc['description'] ?? "No description";
-        documentsText += "• $docName\n  Description: $docDesc\n";
+        String filePath = doc['file_path'] ?? doc['fileName'] ?? "";
+        if (filePath.isNotEmpty) {
+          documentsText += "• $docName\n  Description: $docDesc\n($filePath)\n";
+        } else {
+          documentsText += "• $docName\n  Description: $docDesc\n";
+        }
       }
     } else {
       documentsText = "\n\n📎 **Attached Documents:** None";
@@ -667,9 +679,10 @@ class _ChatBotScreenState extends State<ChatBotScreen>
               nextQuestion: "hasAccount");
         } else if (response == "Web Query Status") {
           _delayedBotResponse(
-              "Welcome to Query Status Check! 📋\n\n"
-                  "**- View Reply to Question**\n"
-                  "(Query ID and E-Mail ID is required. You can also ask supplementary questions)", 700);
+              "!Welcome to Query Status Check!\n"
+                  "Track your query updates with ease.\n"
+                  "To view a response, please enter your Query ID and E-mail ID."
+              "Feel free to submit supplementary questions if needed.", 700);
           _delayedBotResponse("Please provide your Query ID:", 1400,
               nextQuestion: "queryStatusQueryId");
         } else if (response == "Registration Request Status") {
@@ -1156,6 +1169,31 @@ class _ChatBotScreenState extends State<ChatBotScreen>
     RegExp(r'^[a-zA-Z][a-zA-Z0-9 _@#\$%\^\&\*\(\)\-]{2,19}$');
     return regex.hasMatch(UserName);
   }
+  Widget buildDocumentList(List<Map<String, dynamic>> documents) {
+    return ListView.builder(
+      shrinkWrap: true,
+      physics: NeverScrollableScrollPhysics(),
+      itemCount: documents.length,
+      itemBuilder: (context, index) {
+        final doc = documents[index];
+        final filePath = doc['file_path'] ?? doc['fileName'] ?? "";
+        final docName = doc['document_name'] ?? doc['name'] ?? "Document ${index + 1}";
+        final docDesc = doc['document_description'] ?? doc['description'] ?? "No description";
+        return ListTile(
+          leading: Icon(Icons.picture_as_pdf, color: Colors.red),
+          title: Text(docName),
+          subtitle: Text(docDesc),
+          trailing: Icon(Icons.open_in_new),
+          onTap: () async {
+            if (filePath.isNotEmpty) {
+              await OpenFile.open(filePath);
+            }
+          },
+        );
+      },
+    );
+  }
+
   Widget build(BuildContext context) {
       return Scaffold(
       appBar: AppBar(
