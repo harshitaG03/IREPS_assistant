@@ -59,7 +59,6 @@ class _ChatBotScreenState extends State<ChatBotScreen>
   String userEmail = "";
   String mobileNo = "";
   String userDepartment = "";
-  String dscUpdateEmail = "";
   late AnimationController _typingDotsController;
   final Map<String, List<String>> zoneOptions = {
     "Indian Railway": [
@@ -164,12 +163,14 @@ class _ChatBotScreenState extends State<ChatBotScreen>
     _setupScrollListener();
     resetChat();
   }
+
   void dispose() {
     _scrollController.dispose();
     userInputController.dispose();
     _typingDotsController.dispose();
     super.dispose();
   }
+
   void goToPreviousMessage() {
     setState(() {
       if (messages.length >= 2) {
@@ -257,11 +258,17 @@ class _ChatBotScreenState extends State<ChatBotScreen>
   List<String> getOptions() {
     switch (currentQuestion) {
       case "initialMenu":
-        return ["Raise Web Query", "Web Query Status", "Registration Request Status"];
-      case "requestStatusMenu":
-        return ["Registration Request Status", "DSC Update Request"];
+        return [
+          "Raise Web Query",
+          "Web Query Status",
+          "Registration Request Status"
+        ];
       case "queryStatusOptions":
-        return ["Ask supplementary question", "Back to the main menu", "Other query details"];
+        return [
+          "Ask supplementary question",
+          "Back to the main menu",
+          "Other query details"
+        ];
       case "hasAccount":
         return ["Yes", "No"];
       case "department":
@@ -310,8 +317,6 @@ class _ChatBotScreenState extends State<ChatBotScreen>
         return ["Yes", "No"];
       case "queryStatusFound":
         return ["Yes", "No"];
-      case "dscUpdateConfirm":
-        return ["Update DSC"];
       case "subject":
         if (queryType != null) {
           return subjectOptions[queryType!] ?? [];
@@ -322,14 +327,20 @@ class _ChatBotScreenState extends State<ChatBotScreen>
           return zoneOptions[organizationType!] ?? [];
         }
         return [];
-      case "registrationStatusWithDSC":
-        return ["DSC Update"];
-      case "registrationEmailNotFound":
-        return ["Enter registered email", "Back to the main menu"];
+      case "registrationStatusMobile":
+        return [];
+      case "registrationStatusResult":
+        return ["Back to main menu"];
+      case "registrationNotLinked":
+        return [
+          "Back to main menu",
+          "Enter another request ID with linked mobile no."
+        ];
       default:
         return [];
     }
   }
+
   void resetChat() {
     setState(() {
       messages.clear();
@@ -350,7 +361,6 @@ class _ChatBotScreenState extends State<ChatBotScreen>
       _queryId = "";
       queryStatusQueryId = "";
       queryStatusEmail = "";
-      dscUpdateEmail = "";
 
       _showTypingIndicator();
 
@@ -366,6 +376,7 @@ class _ChatBotScreenState extends State<ChatBotScreen>
       });
     });
   }
+
   void _showTypingIndicator() {
     setState(() {
       isTyping = true;
@@ -433,6 +444,7 @@ class _ChatBotScreenState extends State<ChatBotScreen>
       );
     }
   }
+
   void _scrollToTop({bool animate = true}) {
     if (!_scrollController.hasClients) return;
 
@@ -446,23 +458,30 @@ class _ChatBotScreenState extends State<ChatBotScreen>
       _scrollController.jumpTo(0.0);
     }
   }
+
   bool _isAtBottom() {
     if (!_scrollController.hasClients) return false;
     return _scrollController.position.pixels >=
         _scrollController.position.maxScrollExtent - 50;
   }
+
   bool _isAtTop() {
     if (!_scrollController.hasClients) return false;
     return _scrollController.position.pixels <= 50;
   }
+
+  bool _isRequestLinkedToMobile(String requestId, String mobile) {
+    return requestId.length % 2 == 0;
+  }
+
   void _setupScrollListener() {
     _scrollController.addListener(() {
       if (mounted) {
-        setState(() {
-        });
+        setState(() {});
       }
     });
   }
+
   void handleUserResponse(String response) {
     setState(() {
       messages.add({
@@ -513,15 +532,68 @@ class _ChatBotScreenState extends State<ChatBotScreen>
       });
     });
   }
-  Future<bool> _validateDscEmail(String email) async {
+
+  Future<void> _checkRegistrationStatus(String requestId, String mobile) async {
     try {
-      Map<String, dynamic>? userData = await DatabaseHelper.instance.getUserByEmail(email);
-      return userData != null;
+      // Simulate checking if request ID and mobile number are linked
+      // In real implementation, you would check your database
+      bool isLinked = _isRequestLinkedToMobile(requestId, mobile);
+
+      if (isLinked) {
+        // Case 1: Request ID is linked with mobile number
+        bool isApproved = Random().nextBool(); // Random approval for demo
+
+        String status = isApproved ? "approved" : "rejected";
+        String remark = isApproved
+            ? "Your registration has been successfully processed and activated."
+            : "Testing - Registration requirements not met.";
+
+        String statusMessage = "📋 **Registration Status Found!**\n\n"
+            "🆔 **Your Request Number:** $requestId is **${status.toUpperCase()}**\n\n"
+            "📱 **Mobile Number:** $mobile\n\n"
+            "💬 **Remark:** $remark\n\n"
+            "${isApproved ? '🎉 Welcome to IREPS! You can now login with your credentials.' : '❌ Please contact support for further assistance.'}";
+
+        setState(() {
+          isTyping = false;
+          messages.add({
+            'bot': statusMessage,
+            'timestamp': DateTime.now().toString(),
+          });
+          currentQuestion = "registrationStatusResult";
+        });
+      } else {
+        // Case 2: Request ID and mobile number are not linked
+        String notLinkedMessage = "❌ **Request Not Found**\n\n"
+            "Your Request ID: **$requestId** and Mobile Number: **$mobile** are not linked.\n\n"
+            "Please check your details and try again.\n\n"
+            "What would you like to do?";
+
+        setState(() {
+          isTyping = false;
+          messages.add({
+            'bot': notLinkedMessage,
+            'timestamp': DateTime.now().toString(),
+          });
+          currentQuestion = "registrationNotLinked";
+        });
+      }
+
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _scrollToBottom();
+      });
     } catch (e) {
-      print("Error validating DSC email: $e");
-      return false;
+      print('Error checking registration status: $e');
+      _delayedBotResponse(
+          "❌ An error occurred while checking your registration status. Please try again.",
+          1000);
+      currentQuestion = "initialMenu";
+      Future.delayed(Duration(milliseconds: 2000), () {
+        resetChat();
+      });
     }
   }
+
   Future<void> _checkQueryStatus(String queryId, String email) async {
     try {
       // Check in user_responses table first
@@ -532,63 +604,53 @@ class _ChatBotScreenState extends State<ChatBotScreen>
         await _displayQueryDetails(queryData, queryId);
       } else {
         // If not found in user_responses, check in queries table
-        Map<String, dynamic> basicQuery = await DatabaseHelper.instance.getQueryById(queryId);
+        Map<String, dynamic> basicQuery =
+            await DatabaseHelper.instance.getQueryById(queryId);
         if (basicQuery.isNotEmpty) {
           await _displayBasicQueryDetails(basicQuery, queryId);
         } else {
           _delayedBotResponse(
               "❌ No query found with Query ID: $queryId and Email: $email\n\n"
-                  "Please check your Query ID and Email address and try again.", 1000);
+              "Please check your Query ID and Email address and try again.",
+              1000);
           currentQuestion = "initialMenu";
           Future.delayed(Duration(milliseconds: 2000), () {
-            resetChat();
+            // resetChat();
           });
         }
       }
     } catch (e) {
       print('Error checking query status: $e');
       _delayedBotResponse(
-          "❌ An error occurred while checking your query status. Please try again.", 1000);
+          "❌ An error occurred while checking your query status. Please try again.",
+          1000);
       currentQuestion = "initialMenu";
       Future.delayed(Duration(milliseconds: 2000), () {
         resetChat();
       });
     }
   }
-  Future<void> _displayQueryDetails(Map<String, dynamic> queryData, String queryId) async {
+
+  Future<void> _displayQueryDetails(
+      Map<String, dynamic> queryData, String queryId) async {
     // Get documents for this query
-    List<Map<String, dynamic>> documents = await DatabaseHelper.instance
-        .getDocumentsByQueryId(queryId);
+    List<Map<String, dynamic>> documents =
+        await DatabaseHelper.instance.getDocumentsByQueryId(queryId);
 
-    String documentsText = "";
-    if (documents.isNotEmpty) {
-      documentsText = "\n\n📎 **Attached Documents:**\n";
-      for (int i = 0; i < documents.length; i++) {
-        var doc = documents[i];
-        String docName = doc['document_name'] ?? doc['name'] ?? "Document ${i + 1}";
-        String docDesc = doc['document_description'] ?? doc['description'] ?? "No description";
-        String filePath = doc['file_path'] ?? doc['fileName'] ?? "";
-        if (filePath.isNotEmpty) {
-          documentsText += "• $docName\n  Description: $docDesc\n ($filePath)\n";
-        } else {
-          documentsText += "• $docName\n  Description: $docDesc\n";
-        }
-      }
-    } else {
-      documentsText = "\n\n📎 **Attached Documents:** None";
-    }
-
-    String queryCreatedDate = DatabaseHelper.formatDateTimeForDisplay(queryData['created_at']);
-    String replyDate = DatabaseHelper.formatDateTimeForDisplay(queryData['reply_date']);
-    String replyMessage = queryData['reply_message'] ?? "Reply is being processed. Please check back later.";
-    String queryDescription = queryData['query_description'] ?? "No description available";
+    String queryCreatedDate =
+        DatabaseHelper.formatDateTimeForDisplay(queryData['created_at']);
+    String replyDate =
+        DatabaseHelper.formatDateTimeForDisplay(queryData['reply_date']);
+    String replyMessage = queryData['reply_message'] ??
+        "Reply is being processed. Please check back later.";
+    String queryDescription =
+        queryData['query_description'] ?? "No description available";
 
     String statusMessage = "✅ **Query Found!**\n\n"
         "📅 **Query Created On:** $queryCreatedDate\n\n"
         "📝 **Query Description:**\n$queryDescription\n\n"
         "📬 **Reply Created On:** $replyDate\n\n"
-        "💬 **Reply Message:**\n$replyMessage"
-        "$documentsText\n\n"
+        "💬 **Reply Message:**\n$replyMessage\n\n"
         "What would you like to do next?";
 
     setState(() {
@@ -597,7 +659,22 @@ class _ChatBotScreenState extends State<ChatBotScreen>
         'bot': statusMessage,
         'timestamp': DateTime.now().toString(),
       });
-      currentQuestion = "queryStatusOptions"; // Changed from "queryStatusFound"
+
+      // Add documents as a separate message with clickable links
+      if (documents.isNotEmpty) {
+        messages.add({
+          'bot': "📎 **Attached Documents:**",
+          'timestamp': DateTime.now().toString(),
+          'documents': documents, // Add documents data for UI rendering
+        });
+      } else {
+        messages.add({
+          'bot': "📎 **Attached Documents:** None",
+          'timestamp': DateTime.now().toString(),
+        });
+      }
+
+      currentQuestion = "queryStatusOptions";
     });
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -605,37 +682,21 @@ class _ChatBotScreenState extends State<ChatBotScreen>
     });
   }
 
-  Future<void> _displayBasicQueryDetails(Map<String, dynamic> queryData, String queryId) async {
-    List<Map<String, dynamic>> documents = await DatabaseHelper.instance
-        .getDocumentsByQueryId(queryId);
+  Future<void> _displayBasicQueryDetails(
+      Map<String, dynamic> queryData, String queryId) async {
+    List<Map<String, dynamic>> documents =
+        await DatabaseHelper.instance.getDocumentsByQueryId(queryId);
 
-    String documentsText = "";
-    if (documents.isNotEmpty) {
-      documentsText = "\n\n📎 **Attached Documents:**\n";
-      for (int i = 0; i < documents.length; i++) {
-        var doc = documents[i];
-        String docName = doc['document_name'] ?? doc['name'] ?? "Document ${i + 1}";
-        String docDesc = doc['document_description'] ?? doc['description'] ?? "No description";
-        String filePath = doc['file_path'] ?? doc['fileName'] ?? "";
-        if (filePath.isNotEmpty) {
-          documentsText += "• $docName\n  Description: $docDesc\n($filePath)\n";
-        } else {
-          documentsText += "• $docName\n  Description: $docDesc\n";
-        }
-      }
-    } else {
-      documentsText = "\n\n📎 **Attached Documents:** None";
-    }
-
-    String queryCreatedDate = DatabaseHelper.formatDateTimeForDisplay(queryData['date_created']);
-    String queryDescription = queryData['query_description'] ?? "No description available";
+    String queryCreatedDate =
+        DatabaseHelper.formatDateTimeForDisplay(queryData['date_created']);
+    String queryDescription =
+        queryData['query_description'] ?? "No description available";
 
     String statusMessage = "✅ **Query Found!**\n\n"
         "📅 **Query Created On:** $queryCreatedDate\n\n"
         "📝 **Query Description:**\n$queryDescription\n\n"
         "📬 **Reply Created On:** Not available\n\n"
-        "💬 **Reply Message:**\nReply is being processed. Please check back later."
-        "$documentsText\n\n"
+        "💬 **Reply Message:**\nReply is being processed. Please check back later.\n\n"
         "What would you like to do next?";
 
     setState(() {
@@ -644,7 +705,22 @@ class _ChatBotScreenState extends State<ChatBotScreen>
         'bot': statusMessage,
         'timestamp': DateTime.now().toString(),
       });
-      currentQuestion = "queryStatusOptions"; // Changed from "queryStatusFound"
+
+      // Add documents as a separate message with clickable links
+      if (documents.isNotEmpty) {
+        messages.add({
+          'bot': "📎 **Attached Documents:**",
+          'timestamp': DateTime.now().toString(),
+          'documents': documents, // Add documents data for UI rendering
+        });
+      } else {
+        messages.add({
+          'bot': "📎 **Attached Documents:** None",
+          'timestamp': DateTime.now().toString(),
+        });
+      }
+
+      currentQuestion = "queryStatusOptions";
     });
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -652,7 +728,31 @@ class _ChatBotScreenState extends State<ChatBotScreen>
     });
   }
 
-  Future<void> _saveSupplementaryQuestion(String queryId, String email, String question) async {
+  Future<void> _openDocument(String filePath, String docName) async {
+    try {
+      final result = await OpenFile.open(filePath);
+      if (result.type != ResultType.done) {
+        // Show error message if file cannot be opened
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Unable to open document: $docName'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      print('Error opening document: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error opening document: $docName'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  Future<void> _saveSupplementaryQuestion(
+      String queryId, String email, String question) async {
     try {
       await DatabaseHelper.instance.createSupplementaryQuestionsTable();
 
@@ -662,7 +762,8 @@ class _ChatBotScreenState extends State<ChatBotScreen>
         'supplementary_question': question,
       };
 
-      await DatabaseHelper.instance.insertSupplementaryQuestion(supplementaryData);
+      await DatabaseHelper.instance
+          .insertSupplementaryQuestion(supplementaryData);
       print('Supplementary question saved successfully');
     } catch (e) {
       print('Error saving supplementary question: $e');
@@ -680,162 +781,23 @@ class _ChatBotScreenState extends State<ChatBotScreen>
         } else if (response == "Web Query Status") {
           _delayedBotResponse(
               "!Welcome to Query Status Check!\n"
-                  "Track your query updates with ease.\n"
-                  "To view a response, please enter your Query ID and E-mail ID."
-              "Feel free to submit supplementary questions if needed.", 700);
+              "Track your query updates with ease.\n"
+              "To view a response, please enter your Query ID and E-mail ID."
+              "Feel free to submit supplementary questions if needed.",
+              700);
           _delayedBotResponse("Please provide your Query ID:", 1400,
               nextQuestion: "queryStatusQueryId");
         } else if (response == "Registration Request Status") {
           _delayedBotResponse(
               "Welcome to Registration Request Status! 📋\n\n"
-                  "Please provide your registered Email ID to check the registration status:", 700,
-              nextQuestion: "registrationStatusEmail");
-        }
-        break;
-      case "requestStatusMenu":
-        if (response == "Registration Request Status") {
-          _delayedBotResponse(
-              "Welcome to Registration Request Status! 📋\n\n"
-                  "Please provide your registered Email ID to check the registration status:", 700,
-              nextQuestion: "registrationStatusEmail");
-        } else if (response == "DSC Update Request") {
-          _delayedBotResponse(
-              "**- Request for Change of Digital Signing Certificate**\n"
-                  "(Client Name in new DSC should be exactly same as mentioned in the IREPS user account)", 700);
-          _delayedBotResponse("Please provide your registered Email ID for DSC update:", 1400,
-              nextQuestion: "dscUpdateEmail");
-        }
-        break;
-
-      case "dscUpdateEmail":
-        if (!_isValidEmail(response)) {
-          _delayedBotResponse(
-              "Invalid email format. Please enter a valid email address.", 700,
-              nextQuestion: "dscUpdateEmail"); // Keep the same question state
-        } else {
-          bool isRegistered = await _validateDscEmail(response.trim());
-          if (isRegistered) {
-            dscUpdateEmail = response.trim();
-            _delayedBotResponse(
-                "✅ Email verified successfully!\n\n"
-                    "Your registered email: $dscUpdateEmail\n\n"
-                    "Click the button below to proceed with DSC update:", 700,
-                nextQuestion: "dscUpdateConfirm");
-          } else {
-            _delayedBotResponse(
-                "❌ This email is not registered in IREPS system.\n"
-                    "Please enter a registered email address.", 700,
-                nextQuestion: "dscUpdateEmailOptions"); // Changed to show options
-          }
-        }
-        break;
-      case "dscUpdateEmailOptions":
-        if (response == "Back to the main menu") {
-          _delayedBotResponse(
-              "Welcome back! How can I help you?", 700);
-          Future.delayed(Duration(milliseconds: 1000), () {
-            resetChat();
-          });
-        } else if (response == "Another registered email") {
-          _delayedBotResponse(
-              "Please provide your registered Email ID for DSC update:", 700,
-              nextQuestion: "dscUpdateEmail");
-        }
-        break;
-      case "dscUpdateConfirm":
-        if (response == "Update DSC") {
-          // _delayedBotResponse(
-          //     "🔄 Processing DSC update request...", 500);
-          Future.delayed(Duration(milliseconds: 1500), () {
-            _delayedBotResponse(
-                "✅ DSC Update Request Submitted Successfully!\n\n"
-                    "📧 Email: $dscUpdateEmail\n"
-                    "📅 Request Date: $currentDate\n"
-                    "🆔 Request ID: DSC${Random().nextInt(100000)}\n\n"
-                    "Your request for DSC update has been registered with us. "
-                    "Please wait for atleast 3 working days to get your DSC updated.", 700);
-
-            Future.delayed(Duration(milliseconds: 2000), () {
-              _delayedBotResponse(
-                  "Is there anything else I can help you with?", 700,
-                  nextQuestion: "initialMenu");
-            });
+              "Choose this option only if you have already submitted your request for registration.",
+              700);
+          Future.delayed(Duration(milliseconds: 500), () {
+            _delayedBotResponse("Please provide your Request ID:", 700,
+                nextQuestion: "registrationStatusRequestId");
           });
         }
         break;
-      case "registrationStatusEmail":
-        if (!_isValidEmail(response)) {
-          _delayedBotResponse(
-              "Invalid email format. Please enter a valid email address.", 700);
-        } else {
-          String registrationEmail = response.trim();
-          // Check if email exists in system
-          bool isRegistered = await _validateDscEmail(registrationEmail);
-          if (isRegistered) {
-            _delayedBotResponse(
-                "✅ Email verified successfully!\n\n"
-                    "📧 Registered Email: $registrationEmail\n"
-                    "📅 Check Date: $currentDate\n\n"
-                    "Your registration request status: **Approved**\n"
-                    "Your account is active and ready to use.", 700,
-                nextQuestion: "registrationStatusWithDSC");
-          } else {
-            _delayedBotResponse(
-                "❌ This email is not registered in IREPS system.\n"
-                    "Please choose an option below:", 700,
-                nextQuestion: "registrationEmailNotFound"); // Changed this line
-          }
-        }
-        break;
-      case "registrationEmailNotFound":
-        if (response == "Enter registered email") {
-          _delayedBotResponse(
-              "Please provide your registered Email ID to check the registration status:", 700,
-              nextQuestion: "registrationStatusEmail");
-        } else if (response == "Back to the main menu") {
-          _delayedBotResponse(
-              "Welcome back! How can I help you?", 700);
-          Future.delayed(Duration(milliseconds: 1000), () {
-            resetChat();
-          });
-        }
-        break;
-      case "registrationStatusWithDSC":
-        if (response == "DSC Update") {
-          dscUpdateEmail = queryStatusEmail.isNotEmpty ? queryStatusEmail : userEmail;
-          Future.delayed(Duration(milliseconds: 1500), () {
-            _delayedBotResponse(
-                "✅ DSC Update Request Submitted Successfully!\n\n"
-                    "📧 Email: $dscUpdateEmail\n"
-                    "📅 Request Date: $currentDate\n"
-                    "🆔 Request ID: DSC${Random().nextInt(100000)}\n\n"
-                    "Your request for DSC update has been registered with us. "
-                    "Please wait for atleast 3 working days to get your DSC updated.", 700);
-
-            Future.delayed(Duration(milliseconds: 2000), () {
-              _delayedBotResponse(
-                  "Is there anything else I can help you with?", 700,
-                  nextQuestion: "initialMenu");
-            });
-          });
-        }
-        break;
-      case "registrationStatusToUpdate":
-        if (response.toLowerCase() == "yes") {
-          _delayedBotResponse(
-              "**- Request for Change of Digital Signing Certificate**\n"
-                  "(Client Name in new DSC should be exactly same as mentioned in the IREPS user account)", 700);
-          _delayedBotResponse("Please provide your registered Email ID for DSC update:", 1400,
-              nextQuestion: "dscUpdateEmail");
-        } else {
-          _delayedBotResponse(
-              "Thank you for checking your registration status. Is there anything else I can help you with?", 700);
-          Future.delayed(Duration(milliseconds: 1500), () {
-            resetChat();
-          });
-        }
-        break;
-
       case "queryStatusQueryId":
         if (response.trim().isEmpty) {
           _delayedBotResponse(
@@ -858,32 +820,91 @@ class _ChatBotScreenState extends State<ChatBotScreen>
         break;
       case "queryStatusOptions":
         if (response == "Ask supplementary question") {
-          _delayedBotResponse(
-              "Please enter your supplementary question:", 700,
+          _delayedBotResponse("Please enter your supplementary question:", 700,
               nextQuestion: "supplementaryQuestion");
         } else if (response == "Back to the main menu") {
-          _delayedBotResponse(
-              "Welcome back! How can I help you?", 700);
+          _delayedBotResponse("Welcome back! How can I help you?", 700);
           Future.delayed(Duration(milliseconds: 1000), () {
             resetChat();
           });
         } else if (response == "Other query details") {
-          _delayedBotResponse(
-              "Please provide your Query ID:", 700,
+          _delayedBotResponse("Please provide your Query ID:", 700,
               nextQuestion: "queryStatusQueryId");
         }
         break;
       case "supplementaryQuestion":
         if (response.trim().length < 10) {
           _delayedBotResponse(
-              "Please enter at least 10 characters for your supplementary question.", 700);
+              "Please enter at least 10 characters for your supplementary question.",
+              700);
         } else {
-          await _saveSupplementaryQuestion(queryStatusQueryId, queryStatusEmail, response.trim());
+          await _saveSupplementaryQuestion(
+              queryStatusQueryId, queryStatusEmail, response.trim());
           _delayedBotResponse(
               "Your supplementary question has been recorded successfully! ✅\n\n"
-                  "We will get back to you soon.", 700);
+              "We will get back to you soon.",
+              700);
           currentQuestion = "initialMenu";
           resetChat();
+        }
+        break;
+      case "registrationStatusRequestId":
+        if (response.trim().isEmpty) {
+          _delayedBotResponse(
+              "Request ID cannot be empty. Please enter a valid Request ID.",
+              700);
+        } else {
+          setState(() {
+            queryStatusQueryId =
+                response.trim(); // Reusing the same variable for simplicity
+          });
+          _delayedBotResponse(
+              "Please provide your Mobile Number linked with this request:",
+              700,
+              nextQuestion: "registrationStatusMobile");
+        }
+        break;
+
+      case "registrationStatusMobile":
+        if (!_isValidMobile(response)) {
+          _delayedBotResponse(
+              "Invalid mobile number. Please enter a valid 10-digit mobile number.",
+              700);
+        } else {
+          setState(() {
+            mobileNo = response.trim();
+          });
+          await _checkRegistrationStatus(queryStatusQueryId, mobileNo);
+        }
+        break;
+
+      case "registrationStatusResult":
+        if (response == "Back to main menu") {
+          _delayedBotResponse("Welcome back! How can I help you?", 700);
+          Future.delayed(Duration(milliseconds: 1000), () {
+            resetChat();
+          });
+        }
+        break;
+
+      case "registrationNotLinked":
+        if (response == "Back to main menu") {
+          _delayedBotResponse("Welcome back! How can I help you?", 700);
+          Future.delayed(Duration(milliseconds: 1000), () {
+            resetChat();
+          });
+        } else if (response ==
+            "Enter another request ID with linked mobile no.") {
+          // First show welcome message
+          _delayedBotResponse(
+              "Welcome to Registration Request Status! 📋\n\n"
+              "Let's check another request ID for you.",
+              700);
+          // Then ask for request ID after a delay
+          Future.delayed(Duration(milliseconds: 1200), () {
+            _delayedBotResponse("Please provide your Request ID:", 700,
+                nextQuestion: "registrationStatusRequestId");
+          });
         }
         break;
       case "hasAccount":
@@ -897,48 +918,47 @@ class _ChatBotScreenState extends State<ChatBotScreen>
           if (hasIrepsAccount!) {
             try {
               Map<String, dynamic>? userData =
-              await DatabaseHelper.instance.getUserByEmail(userEmail);
+                  await DatabaseHelper.instance.getUserByEmail(userEmail);
               if (userData != null) {
                 int userId = userData['id'];
                 mobileNo = userData['mobile'] ?? "";
                 userDepartment = userData['department'] ?? "";
                 if (userDepartment == "Vendor/Contractor/Auction Bidder") {
                   List<Map<String, dynamic>> vendorData =
-                  await DatabaseHelper.instance.query('vendor_details',
-                      where: 'user_id = ?', whereArgs: [userId]);
+                      await DatabaseHelper.instance.query('vendor_details',
+                          where: 'user_id = ?', whereArgs: [userId]);
                   if (vendorData.isNotEmpty) {
                     firmName = vendorData.first['firm_name'] ?? "";
                     UserName = vendorData.first['user_name'] ?? "";
                   }
                   _delayedBotResponse(
                       "Your Registered Details are:\n"
-                          " Email: $userEmail\n"
-                          " Mobile No.: $mobileNo\n"
-                          " Firm Name: $firmName\n"
-                          " Username: $UserName\n"
-                          " Department: $userDepartment",
+                      " Email: $userEmail\n"
+                      " Mobile No.: $mobileNo\n"
+                      " Firm Name: $firmName\n"
+                      " Username: $UserName\n"
+                      " Department: $userDepartment",
                       700);
                 } else if (userDepartment == "Railway/Departmental User") {
                   List<Map<String, dynamic>> railwayData = await DatabaseHelper
                       .instance
                       .query('railway_user_details',
-                      where: 'user_id = ?', whereArgs: [userId]);
+                          where: 'user_id = ?', whereArgs: [userId]);
                   if (railwayData.isNotEmpty) {
                     organizationType = railwayData.first['organization'] ?? "";
                     zone = railwayData.first['zone'] ?? "";
                     unit = railwayData.first['unit'] ?? "";
-                    designation = railwayData.first['designation'] ??
-                        "";
+                    designation = railwayData.first['designation'] ?? "";
                   }
                   _delayedBotResponse(
                       "Your Registered Details are:\n"
-                          " Email: $userEmail\n"
-                          " Mobile No.: $mobileNo\n"
-                          " Organization: $organizationType\n"
-                          " Zone: $zone\n"
-                          " Unit: $unit\n"
-                          " Designation: $designation\n"
-                          " Department: $userDepartment",
+                      " Email: $userEmail\n"
+                      " Mobile No.: $mobileNo\n"
+                      " Organization: $organizationType\n"
+                      " Zone: $zone\n"
+                      " Unit: $unit\n"
+                      " Designation: $designation\n"
+                      " Department: $userDepartment",
                       700);
                 }
                 _delayedBotResponse("Query related to?", 2000,
@@ -1085,9 +1105,7 @@ class _ChatBotScreenState extends State<ChatBotScreen>
           _delayedBotResponse(
               "Please enter at least 20 characters in the Description field.",
               700,
-              nextQuestion:
-              "queryDescription"
-          );
+              nextQuestion: "queryDescription");
         } else {
           queryDescription = response.trim();
           _delayedBotResponse("Do you want to submit this query?", 700,
@@ -1154,21 +1172,21 @@ class _ChatBotScreenState extends State<ChatBotScreen>
   bool _isValidEmail(String? email) {
     if (email == null) return false;
     final emailRegex =
-    RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
+        RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
     return emailRegex.hasMatch(email);
   }
 
   bool _isValidMobile(String mobile) {
-    RegExp regex = RegExp(
-        r'^[6-9]\d{9}$');
+    RegExp regex = RegExp(r'^[6-9]\d{9}$');
     return regex.hasMatch(mobile) && mobile.length == 10;
   }
 
   bool _isValidUserName(String UserName) {
     final RegExp regex =
-    RegExp(r'^[a-zA-Z][a-zA-Z0-9 _@#\$%\^\&\*\(\)\-]{2,19}$');
+        RegExp(r'^[a-zA-Z][a-zA-Z0-9 _@#\$%\^\&\*\(\)\-]{2,19}$');
     return regex.hasMatch(UserName);
   }
+
   Widget buildDocumentList(List<Map<String, dynamic>> documents) {
     return ListView.builder(
       shrinkWrap: true,
@@ -1177,8 +1195,11 @@ class _ChatBotScreenState extends State<ChatBotScreen>
       itemBuilder: (context, index) {
         final doc = documents[index];
         final filePath = doc['file_path'] ?? doc['fileName'] ?? "";
-        final docName = doc['document_name'] ?? doc['name'] ?? "Document ${index + 1}";
-        final docDesc = doc['document_description'] ?? doc['description'] ?? "No description";
+        final docName =
+            doc['document_name'] ?? doc['name'] ?? "Document ${index + 1}";
+        final docDesc = doc['document_description'] ??
+            doc['description'] ??
+            "No description";
         return ListTile(
           leading: Icon(Icons.picture_as_pdf, color: Colors.red),
           title: Text(docName),
@@ -1195,7 +1216,7 @@ class _ChatBotScreenState extends State<ChatBotScreen>
   }
 
   Widget build(BuildContext context) {
-      return Scaffold(
+    return Scaffold(
       appBar: AppBar(
         backgroundColor: Color(0xFF075E54),
         title: Row(
@@ -1319,71 +1340,189 @@ class _ChatBotScreenState extends State<ChatBotScreen>
                               ),
                             ),
                           Align(
-                            alignment: isBot
-                                ? Alignment.centerLeft
-                                : Alignment.centerRight,
-                            child: Container(
-                              margin: EdgeInsets.symmetric(
-                                  vertical: 2, horizontal: 8),
-                              padding: EdgeInsets.symmetric(
-                                  horizontal: 10, vertical: 10),
-                              constraints: BoxConstraints(
-                                maxWidth:
-                                MediaQuery.of(context).size.width *
-                                    0.75,
-                              ),
-                              decoration: BoxDecoration(
-                                color: isBot
-                                    ? Colors.white
-                                    : Color(0xFFDCF8C6),
-                                borderRadius: BorderRadius.only(
-                                  topLeft: Radius.circular(isBot ? 0 : 12),
-                                  topRight: Radius.circular(isBot ? 12 : 0),
-                                  bottomLeft: Radius.circular(12),
-                                  bottomRight: Radius.circular(12),
+                              alignment: isBot
+                                  ? Alignment.centerLeft
+                                  : Alignment.centerRight,
+                              child: Container(
+                                margin: EdgeInsets.symmetric(
+                                    vertical: 2, horizontal: 8),
+                                padding: EdgeInsets.symmetric(
+                                    horizontal: 10, vertical: 10),
+                                constraints: BoxConstraints(
+                                  maxWidth:
+                                      MediaQuery.of(context).size.width * 0.75,
                                 ),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.05),
-                                    blurRadius: 2,
-                                    offset: Offset(0, 1),
+                                decoration: BoxDecoration(
+                                  color:
+                                      isBot ? Colors.white : Color(0xFFDCF8C6),
+                                  borderRadius: BorderRadius.only(
+                                    topLeft: Radius.circular(isBot ? 0 : 12),
+                                    topRight: Radius.circular(isBot ? 12 : 0),
+                                    bottomLeft: Radius.circular(12),
+                                    bottomRight: Radius.circular(12),
                                   ),
-                                ],
-                              ),
-                              child: Stack(
-                                children: [
-                                  Padding(
-                                    padding: EdgeInsets.only(
-                                        right: 45),
-                                    child: Text(
-                                      isBot
-                                          ? messages[index]['bot']
-                                          : messages[index]['user'],
-                                      style: TextStyle(
-                                        fontSize: 13,
-                                        fontFamily: 'Poppins',
-                                        color: Colors.black87,
-                                        height: 1.4,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.05),
+                                      blurRadius: 2,
+                                      offset: Offset(0, 1),
+                                    ),
+                                  ],
+                                ),
+                                child: Stack(
+                                  children: [
+                                    Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Padding(
+                                          padding: EdgeInsets.only(right: 45),
+                                          child: Text(
+                                            isBot
+                                                ? messages[index]['bot']
+                                                : messages[index]['user'],
+                                            style: TextStyle(
+                                              fontSize: 13,
+                                              fontFamily: 'Poppins',
+                                              color: Colors.black87,
+                                              height: 1.4,
+                                            ),
+                                          ),
+                                        ),
+
+                                        // Add document links if this message contains documents
+                                        if (isBot &&
+                                            messages[index]
+                                                .containsKey('documents')) ...[
+                                          SizedBox(height: 8),
+                                          ...List.generate(
+                                            (messages[index]['documents']
+                                                    as List<
+                                                        Map<String, dynamic>>)
+                                                .length,
+                                            (docIndex) {
+                                              final doc = (messages[index]
+                                                      ['documents']
+                                                  as List<
+                                                      Map<String,
+                                                          dynamic>>)[docIndex];
+                                              final docName = doc[
+                                                      'document_name'] ??
+                                                  doc['name'] ??
+                                                  "Document ${docIndex + 1}";
+                                              final docDesc =
+                                                  doc['document_description'] ??
+                                                      doc['description'] ??
+                                                      "No description";
+                                              final filePath =
+                                                  doc['file_path'] ??
+                                                      doc['fileName'] ??
+                                                      "";
+
+                                              return Container(
+                                                margin:
+                                                    EdgeInsets.only(bottom: 8),
+                                                child: InkWell(
+                                                  onTap: () async {
+                                                    if (filePath.isNotEmpty) {
+                                                      await _openDocument(
+                                                          filePath, docName);
+                                                    }
+                                                  },
+                                                  borderRadius:
+                                                      BorderRadius.circular(8),
+                                                  child: Container(
+                                                    padding: EdgeInsets.all(8),
+                                                    decoration: BoxDecoration(
+                                                      color: Color(0xFFF0F8FF),
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                              8),
+                                                      border: Border.all(
+                                                          color:
+                                                              Color(0xFF075E54)
+                                                                  .withOpacity(
+                                                                      0.3)),
+                                                    ),
+                                                    child: Row(
+                                                      children: [
+                                                        Icon(
+                                                          Icons.picture_as_pdf,
+                                                          color: Colors.red,
+                                                          size: 20,
+                                                        ),
+                                                        SizedBox(width: 8),
+                                                        Expanded(
+                                                          child: Column(
+                                                            crossAxisAlignment:
+                                                                CrossAxisAlignment
+                                                                    .start,
+                                                            children: [
+                                                              Text(
+                                                                docName,
+                                                                style:
+                                                                    TextStyle(
+                                                                  fontSize: 12,
+                                                                  fontWeight:
+                                                                      FontWeight
+                                                                          .w600,
+                                                                  color: Color(
+                                                                      0xFF075E54),
+                                                                  decoration:
+                                                                      TextDecoration
+                                                                          .underline,
+                                                                ),
+                                                              ),
+                                                              if (docDesc
+                                                                      .isNotEmpty &&
+                                                                  docDesc !=
+                                                                      "No description")
+                                                                Text(
+                                                                  docDesc,
+                                                                  style:
+                                                                      TextStyle(
+                                                                    fontSize:
+                                                                        10,
+                                                                    color: Colors
+                                                                            .grey[
+                                                                        600],
+                                                                  ),
+                                                                ),
+                                                            ],
+                                                          ),
+                                                        ),
+                                                        Icon(
+                                                          Icons.open_in_new,
+                                                          color:
+                                                              Color(0xFF075E54),
+                                                          size: 16,
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                ),
+                                              );
+                                            },
+                                          ),
+                                        ],
+                                      ],
+                                    ),
+                                    Positioned(
+                                      bottom: 0,
+                                      right: 0,
+                                      child: Text(
+                                        _formatTimestamp(
+                                            messages[index]['timestamp']),
+                                        style: TextStyle(
+                                          fontSize: 9,
+                                          color: Colors.grey[600],
+                                          fontFamily: 'Poppins',
+                                        ),
                                       ),
                                     ),
-                                  ),
-                                  Positioned(
-                                    bottom: 0,
-                                    right: 0,
-                                    child: Text(
-                                      _formatTimestamp(
-                                          messages[index]['timestamp']),
-                                      style: TextStyle(
-                                        fontSize: 9,
-                                        color: Colors.grey[600],
-                                        fontFamily: 'Poppins',
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
+                                  ],
+                                ),
+                              )),
                           if (isBot &&
                               index == messages.length - 1 &&
                               getOptions().isNotEmpty)
@@ -1392,33 +1531,44 @@ class _ChatBotScreenState extends State<ChatBotScreen>
                               return Align(
                                 alignment: Alignment.centerLeft,
                                 child: Padding(
-                                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                                  padding: EdgeInsets.symmetric(
+                                      horizontal: 8, vertical: 8),
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     mainAxisSize: MainAxisSize.min,
                                     children: options.map((option) {
                                       return Container(
                                         margin: EdgeInsets.only(bottom: 8),
                                         constraints: BoxConstraints(
-                                          maxWidth: MediaQuery.of(context).size.width * 0.75,
+                                          maxWidth: MediaQuery.of(context)
+                                                  .size
+                                                  .width *
+                                              0.75,
                                         ),
                                         child: Material(
                                           color: Colors.transparent,
                                           child: InkWell(
-                                            borderRadius: BorderRadius.circular(12),
-                                            onTap: () => handleUserResponse(option),
-                                            splashColor: Color(0xFF075E54).withOpacity(0.1),
-                                            highlightColor: Color(0xFF075E54).withOpacity(0.05),
+                                            borderRadius:
+                                                BorderRadius.circular(12),
+                                            onTap: () =>
+                                                handleUserResponse(option),
+                                            splashColor: Color(0xFF075E54)
+                                                .withOpacity(0.1),
+                                            highlightColor: Color(0xFF075E54)
+                                                .withOpacity(0.05),
                                             child: Ink(
                                               decoration: BoxDecoration(
                                                 color: Colors.white,
-                                                borderRadius: BorderRadius.circular(10),
+                                                borderRadius:
+                                                    BorderRadius.circular(10),
                                                 border: Border.all(
                                                   color: Colors.grey[300]!,
                                                 ),
                                                 boxShadow: [
                                                   BoxShadow(
-                                                    color: Colors.black.withOpacity(0.08),
+                                                    color: Colors.black
+                                                        .withOpacity(0.08),
                                                     spreadRadius: 0,
                                                     blurRadius: 3,
                                                     offset: Offset(0, 2),
@@ -1454,7 +1604,6 @@ class _ChatBotScreenState extends State<ChatBotScreen>
                         ],
                       );
                     }),
-
                     SizedBox(height: 30),
                   ],
                 ),
@@ -1493,23 +1642,37 @@ class _ChatBotScreenState extends State<ChatBotScreen>
                             Expanded(
                               child: TextField(
                                 controller: userInputController,
-                                maxLength: currentQuestion == "mobileNo" ? 10 : null,
-                                keyboardType: currentQuestion == "mobileNo"
+                                maxLength: (currentQuestion == "mobileNo" ||
+                                        currentQuestion ==
+                                            "registrationStatusMobile")
+                                    ? 10
+                                    : null,
+                                keyboardType: (currentQuestion == "mobileNo" ||
+                                        currentQuestion ==
+                                            "registrationStatusMobile")
                                     ? TextInputType.number
                                     : TextInputType.text,
                                 decoration: InputDecoration(
                                   border: InputBorder.none,
-                                  hintText: currentQuestion == "mobileNo"
+                                  hintText: (currentQuestion == "mobileNo" ||
+                                          currentQuestion ==
+                                              "registrationStatusMobile")
                                       ? "Enter your 10-digit mobile number..."
                                       : currentQuestion == "queryStatusCheck"
-                                      ? "Enter Query ID..."
-                                      : currentQuestion == "requestStatusCheck"
-                                      ? "Enter Request ID..."
-                                      : "Type your message...",
+                                          ? "Enter Query ID..."
+                                          : currentQuestion ==
+                                                  "requestStatusCheck"
+                                              ? "Enter Request ID..."
+                                              : "Type your message...",
                                   hintStyle: TextStyle(
                                       fontSize: 12, color: Colors.grey[600]),
-                                  contentPadding: EdgeInsets.symmetric(vertical: 14),
-                                  counterText: currentQuestion == "mobileNo" ? "" : null,
+                                  contentPadding:
+                                      EdgeInsets.symmetric(vertical: 14),
+                                  counterText: (currentQuestion == "mobileNo" ||
+                                          currentQuestion ==
+                                              "registrationStatusMobile")
+                                      ? ""
+                                      : null,
                                 ),
                                 style: TextStyle(color: Colors.black87),
                                 onSubmitted: (value) {
